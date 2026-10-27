@@ -64,20 +64,30 @@ const CONFIG = {
   BONUS_PREGUNTA: 50,          // premio por acertar la pregunta final a la primera
 
   // Dificultad: va del valor INICIAL al FINAL suavemente durante el juego
-  INTERVALO_INICIAL: 1.15,     // segundos entre una aparición y otra
-  INTERVALO_FINAL: 0.5,
-  VELOCIDAD_INICIAL: 0.17,     // en "altos de pantalla por segundo"
-  VELOCIDAD_FINAL: 0.33,
-  MAX_OBJETOS_INICIAL: 4,      // objetos en pantalla a la vez
-  MAX_OBJETOS_FINAL: 9,
-  PROB_TESORO_INICIAL: 0.16,   // probabilidad de que salga un tesoro en vez de calabaza
-  PROB_TESORO_FINAL: 0.24,
-  DORADA_CADA_MIN: 6,          // cada cuántos segundos (mínimo y máximo) sale una dorada
-  DORADA_CADA_MAX: 10,
+  INTERVALO_INICIAL: 0.75,     // segundos entre una aparición y otra
+  INTERVALO_FINAL: 0.3,
+  GRAVEDAD_INICIAL: 0.62,      // los objetos salen lanzados en arco; más gravedad = vuelan más rápido
+  GRAVEDAD_FINAL: 1.05,        // (en "altos de pantalla por segundo²")
+  ALTURA_MIN: 0.22,            // hasta dónde suben (fracción de la pantalla desde arriba)
+  ALTURA_MAX: 0.55,
+  MAX_OBJETOS_INICIAL: 5,      // objetos en pantalla a la vez
+  MAX_OBJETOS_FINAL: 12,
+  PROB_TANDA_INICIAL: 0.1,     // probabilidad de que salgan 2 o 3 juntos
+  PROB_TANDA_FINAL: 0.45,
+  PROB_TESORO_INICIAL: 0.14,   // probabilidad de que salga un tesoro en vez de calabaza
+  PROB_TESORO_FINAL: 0.2,
+  DORADA_CADA_MIN: 5,          // cada cuántos segundos (mínimo y máximo) sale una dorada
+  DORADA_CADA_MAX: 9,
+  DORADA_DEVUELVE_VIDA: true,  // romper una dorada devuelve una estrellita perdida
   PROTECCION_TRAS_ERROR: 1.0,  // segundos sin poder perder otra vida
 
-  ESTRELLAS_2: 350,            // puntaje para 2 estrellas
-  ESTRELLAS_3: 800,            // puntaje para 3 estrellas
+  // Corte deslizando el dedo (estilo "cortar frutas")
+  DURACION_ESTELA: 0.2,        // segundos que dura la estela de luz
+  BONUS_CORTE_MULTIPLE: 10,    // puntos extra por cada calabaza cortada en una misma pasada (desde 2)
+  PAUSA_GOLPE_JEFE: 0.09,      // segundos mínimos entre dos golpes de la misma pasada al jefe
+
+  ESTRELLAS_2: 450,            // puntaje para 2 estrellas
+  ESTRELLAS_3: 1000,           // puntaje para 3 estrellas
 
   LOGO: 'logo.png',            // archivo del logo de la iglesia (misma carpeta)
 };
@@ -90,11 +100,11 @@ const TEXTOS = {
   SUBTITULO: '¡Rompe las Calabazas del Miedo!',
   LEMA: '¡Rompé las calabazas del miedo con la Luz de Jesús!',
   JUGAR: '¡JUGAR!',
-  INSTRUCCION_1: 'Tocá las 🎃 para romperlas con luz',
-  INSTRUCCION_2: 'No toques los tesoros 📖 ❤️ 🕊️ ✝️',
+  INSTRUCCION_1: 'Deslizá el dedo para cortar las 🎃',
+  INSTRUCCION_2: 'No toques los tesoros 📖 ❤️ 🕊️',   // (después se dibuja el logo M.I.L.)
   MEJOR: 'Mejor puntaje',
   INICIO_PARTIDA: '¡A brillar!',
-  INICIO_PARTIDA_SUB: 'Tocá las calabazas 🎃',
+  INICIO_PARTIDA_SUB: 'Cortá o tocá las calabazas 🎃',
   FRASES_DORADA: [
     'Jesús es la luz del mundo',
     'La luz brilla en las tinieblas',
@@ -105,7 +115,8 @@ const TEXTOS = {
   MODO_LUZ: '¡MODO LUZ!',
   MODO_LUZ_SUB: 'Puntos x2',
   JEFE_LLEGA: '¡La calabaza gigante!',
-  JEFE_LLEGA_SUB: '¡Tocala muchas veces!',
+  JEFE_LLEGA_SUB: '¡Cortala o tocala muchas veces!',
+  CORTE_MULTIPLE: '¡Corte x',
   JEFE_NOMBRE: 'Calabaza gigante',
   MENSAJE_FINAL: '¡Nosotros celebramos a Jesús, no Halloween!',
   FINAL_JEFE: '¡Rompiste la calabaza gigante!',
@@ -115,7 +126,7 @@ const TEXTOS = {
   PREGUNTA: '¿A quién celebramos?',
   RESP_JESUS: 'Jesús',
   CASI: '¡Casi! Celebramos a Jesús, la Luz del mundo.',
-  CASI_SUB: 'Tocá a Jesús ✝️',
+  CASI_SUB: 'Tocá a Jesús 👉',
   BIEN: '¡Muy bien!',
   BIEN_SUB: '¡Celebramos a Jesús, la Luz del mundo!',
   VER_RESULTADO: 'Ver mi resultado ➜',
@@ -141,7 +152,7 @@ const COLOR = {
   verde: '#5ed38a', celeste: '#7bdff2', rosa: '#ff7aa8',
 };
 const CONFETI = [COLOR.naranja, COLOR.amarillo, COLOR.violeta, COLOR.celeste, COLOR.rosa, '#ffffff'];
-const TESOROS = ['📖', '❤️', '🕊️', '✝️'];
+const TESOROS = ['📖', '❤️', '🕊️', 'logo'];   // 'logo' = el logo de la iglesia M.I.L.
 const FUENTE = '"Arial Rounded MT Bold","Varela Round","Nunito","Baloo 2","Trebuchet MS","Segoe UI",system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"';
 const FUENTE_EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
@@ -192,7 +203,7 @@ function redimensionar() {
     estrellasCielo.push({ x: Math.random() * W, y: Math.random() * H * 0.8, r: rand(0.6, 1.8), f: rand(0.5, 2), fase: rand(0, 6.28) });
   }
   // Si achicaron la ventana, que nada quede afuera
-  for (const o of J.objetos) o.x0 = clamp(o.x0, o.r, Math.max(o.r, W - o.r));
+  for (const o of J.objetos) o.x = clamp(o.x, o.r, Math.max(o.r, W - o.r));
 }
 
 // Camino de rectángulo redondeado
@@ -364,11 +375,13 @@ logo.onload = () => { logoListo = logo.naturalWidth > 0; };
 logo.onerror = () => { logoListo = false; };
 logo.src = CONFIG.LOGO;
 
-function dibujarLogo(x, y, tam) {
+function dibujarLogo(x, y, tam, halo = true) {
   // halo de luz detrás
-  const h = ctx.createRadialGradient(x, y, tam * 0.3, x, y, tam * 0.85);
-  h.addColorStop(0, 'rgba(255,230,140,0.45)'); h.addColorStop(1, 'rgba(255,230,140,0)');
-  ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, tam * 0.85, 0, Math.PI * 2); ctx.fill();
+  if (halo) {
+    const h = ctx.createRadialGradient(x, y, tam * 0.3, x, y, tam * 0.85);
+    h.addColorStop(0, 'rgba(255,230,140,0.45)'); h.addColorStop(1, 'rgba(255,230,140,0)');
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, tam * 0.85, 0, Math.PI * 2); ctx.fill();
+  }
   if (logoListo) {
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, tam / 2, 0, Math.PI * 2); ctx.clip();
     ctx.drawImage(logo, x - tam / 2, y - tam / 2, tam, tam);
@@ -429,6 +442,8 @@ const Sonido = {
   },
 
   pop()      { this.ruido(0.09, 0.35, 1600); this.tono(420, 0.14, 'sine', 0.3, 1100); },
+  corte()    { this.ruido(0.12, 0.3, 4200); },
+  combo(n)   { [660, 880, 1100, 1320].slice(0, Math.min(4, n)).forEach((f, i) => this.tono(f, 0.14, 'triangle', 0.16, 0, i * 0.05)); },
   estrella() { [880, 1175, 1568, 2093].forEach((f, i) => this.tono(f, 0.18, 'triangle', 0.16, 0, i * 0.06)); },
   error()    { this.tono(440, 0.2, 'sine', 0.18, 370); this.tono(370, 0.3, 'sine', 0.14, 294, 0.16); },
   modoLuz()  { this.tono(300, 0.5, 'triangle', 0.18, 1200); [784, 988, 1175].forEach((f, i) => this.tono(f, 0.25, 'sine', 0.12, 0, 0.3 + i * 0.08)); },
@@ -486,7 +501,7 @@ function iniciarJuego() {
     objetos: [], proximaAparicion: 0.9, proximaDorada: rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX),
     fase: 'normal', jefe: null, final: null, flash: 0, sacudida: 0, pregunta: null, resultado: null,
   });
-  particulas = []; flotantes = [];
+  particulas = []; flotantes = []; estelas = []; pasadas.clear();
   cambiarPantalla('juego');
   mostrarBanner(TEXTOS.INICIO_PARTIDA, TEXTOS.INICIO_PARTIDA_SUB, COLOR.amarillo, 2);
 }
@@ -500,19 +515,23 @@ function mostrarBanner(titulo, sub, color, duracion = 2.2) {
    --------------------------------------------------------------------- */
 function crearObjeto(tipo) {
   const r = tipo === 'dorada' ? radioObjeto() * 1.1 : radioObjeto();
-  // Elegimos un lugar que no pise a otro objeto recién salido
-  let x = rand(r + 8, W - r - 8);
+  // Sale lanzado desde abajo en arco: elegimos dónde nace y hasta qué altura sube
+  let x = rand(W * 0.12 + r, W * 0.88 - r);
   for (let intento = 0; intento < 6; intento++) {
-    const choca = J.objetos.some(o => o.y > H - r * 3 && Math.abs(o.x0 - x) < r * 2.2);
+    const choca = J.objetos.some(o => o.y > H - r * 3 && Math.abs(o.x - x) < r * 2.2);
     if (!choca) break;
-    x = rand(r + 8, W - r - 8);
+    x = rand(W * 0.12 + r, W * 0.88 - r);
   }
-  const vel = H * lerp(CONFIG.VELOCIDAD_INICIAL, CONFIG.VELOCIDAD_FINAL, dificultad()) * rand(0.85, 1.15);
+  const g = H * lerp(CONFIG.GRAVEDAD_INICIAL, CONFIG.GRAVEDAD_FINAL, dificultad()) * (tipo === 'dorada' ? 0.8 : 1);
+  const yCima = Math.max(hudAbajo() + r, H * rand(CONFIG.ALTURA_MIN, CONFIG.ALTURA_MAX));
+  const y0 = H + r + 6;
+  const vy = -Math.sqrt(2 * g * (y0 - yCima));
+  const tiempoVuelo = (-2 * vy) / g;
+  const xDestino = rand(r, W - r);                       // dónde cae: cruza la pantalla en diagonal
   J.objetos.push({
     tipo, emoji: tipo === 'tesoro' ? elegir(TESOROS) : null,
-    x0: x, x, y: H + r + 6, r,
-    vy: -vel * (tipo === 'dorada' ? 0.8 : 1),
-    amp: rand(6, Math.min(36, W * 0.06)), frec: rand(0.9, 2), fase: rand(0, 6.28),
+    x, y: y0, r, vx: clamp((xDestino - x) / tiempoVuelo, -W * 0.35, W * 0.35), vy, g,
+    giro: 0, vGiro: tipo === 'tesoro' ? 0 : rand(-2.5, 2.5), fase: rand(0, 6.28),
     t: 0, estado: 'vivo', tEstado: 0,
   });
 }
@@ -520,16 +539,14 @@ function crearObjeto(tipo) {
 function actualizarObjetos(dt) {
   for (const o of J.objetos) {
     o.t += dt;
-    if (o.estado === 'vivo') {
-      o.y += o.vy * dt;
-    } else {
-      o.tEstado += dt;
-      o.y += o.vy * dt * 0.4;
-    }
-    o.x = clamp(o.x0 + Math.sin(o.t * o.frec + o.fase) * o.amp, o.r * 0.6, W - o.r * 0.6);
+    if (o.estado !== 'vivo') o.tEstado += dt;
+    o.vy += o.g * dt;
+    o.x += o.vx * dt; o.y += o.vy * dt;
+    o.giro += o.vGiro * dt;
+    if (o.x < o.r * 0.6 || o.x > W - o.r * 0.6) { o.vx = -o.vx; o.x = clamp(o.x, o.r * 0.6, W - o.r * 0.6); }
   }
   J.objetos = J.objetos.filter(o =>
-    o.y > -o.r * 1.6 && !(o.estado !== 'vivo' && o.tEstado > 0.8));
+    !(o.vy > 0 && o.y > H + o.r * 1.6) && !(o.estado !== 'vivo' && o.tEstado > 0.8));
 }
 
 function dibujarObjetos() {
@@ -538,7 +555,7 @@ function dibujarObjetos() {
     if (o.estado === 'saliendo') { alfa = 1 - o.tEstado / 0.8; esc = 1 - o.tEstado * 0.3; }
     if (o.estado === 'tocado') { alfa = 1 - o.tEstado / 0.8; esc = 1 + o.tEstado * 0.6; }
     alfa = clamp(alfa, 0, 1);
-    const balanceo = Math.sin(o.t * 2.2 + o.fase) * 0.12;
+    const balanceo = Math.sin(o.t * 2.2 + o.fase) * 0.12 + o.giro;
     ctx.save();
     ctx.globalAlpha = alfa;
     ctx.translate(o.x, o.y); ctx.rotate(balanceo); ctx.scale(esc, esc);
@@ -549,8 +566,8 @@ function dibujarObjetos() {
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2.5; ctx.stroke();
       ctx.globalAlpha = alfa;
-      const s = spriteEmoji(o.emoji); const tam = o.r * 1.35;
-      ctx.drawImage(s, -tam / 2, -tam / 2, tam, tam);
+      if (o.emoji === 'logo') dibujarLogo(0, 0, o.r * 1.5, false);
+      else { const s = spriteEmoji(o.emoji); const tam = o.r * 1.35; ctx.drawImage(s, -tam / 2, -tam / 2, tam, tam); }
     } else {
       if (o.tipo === 'dorada') {
         const p = 0.75 + Math.sin(J.reloj * 6) * 0.25;
@@ -606,11 +623,13 @@ function actualizarEfectos(dt) {
     p.vida += dt;
     if (p.vx !== undefined) {
       p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.tipo === 'confeti') { p.vy += 380 * dt; p.vx *= 0.985; } else { p.vy += 160 * dt; p.vx *= 0.97; }
+      if (p.tipo === 'confeti') { p.vy += 380 * dt; p.vx *= 0.985; }
+      else if (p.tipo === 'mitad') { p.vy += H * 1.1 * dt; }
+      else { p.vy += 160 * dt; p.vx *= 0.97; }
       p.rot += p.vr * dt;
     }
   }
-  particulas = particulas.filter(p => p.vida < p.max && p.y < H + 40);
+  particulas = particulas.filter(p => p.vida < p.max && p.y < H + (p.tam || 0) + 40);
   for (const f of flotantes) { f.vida += dt; f.y -= 60 * U * dt; }
   flotantes = flotantes.filter(f => f.vida < f.max);
 }
@@ -627,6 +646,21 @@ function dibujarParticulas() {
       const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
       g.addColorStop(0, `rgba(255,255,230,${0.95 * alfa})`); g.addColorStop(0.4, `rgba(255,230,120,${0.6 * alfa})`); g.addColorStop(1, 'rgba(255,220,100,0)');
       ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    } else if (p.tipo === 'mitad') {
+      // Media calabaza: recortamos el dibujo por la línea del corte
+      ctx.globalAlpha = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
+      // (la máscara gira junto con la mitad, así el corte queda pegado al dibujo)
+      const s = p.tam, giro = p.rot - p.rot0;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.corte + giro);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(-s, p.lado < 0 ? -s : 0, s * 2, s); ctx.clip();
+      ctx.rotate(p.rot0 - p.corte);
+      ctx.drawImage(p.dorada ? SPRITE_DORADA : SPRITE_CALABAZA, -s / 2, -s * 0.56, s, s);
+      ctx.restore();
+      // Borde de luz en el corte
+      ctx.strokeStyle = `rgba(255,248,200,${0.9 * (1 - k)})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-s * 0.4, 0); ctx.lineTo(s * 0.4, 0); ctx.stroke();
+      ctx.restore();
     } else if (p.tipo === 'estrella') {
       ctx.globalAlpha = alfa; ctx.fillStyle = p.color;
       caminoEstrella(ctx, p.x, p.y, p.tam, 5, 0.45, p.rot); ctx.fill();
@@ -666,14 +700,18 @@ function actualizarJuego(dt) {
     const vivos = J.objetos.filter(o => o.estado === 'vivo').length;
     const maximo = Math.round(lerp(CONFIG.MAX_OBJETOS_INICIAL, CONFIG.MAX_OBJETOS_FINAL, d));
     if (J.proximaAparicion <= 0 && vivos < maximo) {
-      if (J.proximaDorada <= 0) {
-        crearObjeto('dorada');
-        J.proximaDorada = rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX);
-      } else {
-        const probTesoro = J.transcurrido < 3 ? 0 : lerp(CONFIG.PROB_TESORO_INICIAL, CONFIG.PROB_TESORO_FINAL, d);
-        crearObjeto(Math.random() < probTesoro ? 'tesoro' : 'calabaza');
+      // A veces sale una tanda de 2 o 3 juntos (para cortarlos de una pasada)
+      const tanda = Math.random() < lerp(CONFIG.PROB_TANDA_INICIAL, CONFIG.PROB_TANDA_FINAL, d) ? (Math.random() < 0.5 ? 2 : 3) : 1;
+      for (let i = 0; i < Math.min(tanda, maximo - vivos); i++) {
+        if (J.proximaDorada <= 0) {
+          crearObjeto('dorada');
+          J.proximaDorada = rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX);
+        } else {
+          const probTesoro = J.transcurrido < 3 ? 0 : lerp(CONFIG.PROB_TESORO_INICIAL, CONFIG.PROB_TESORO_FINAL, d);
+          crearObjeto(Math.random() < probTesoro ? 'tesoro' : 'calabaza');
+        }
       }
-      J.proximaAparicion = lerp(CONFIG.INTERVALO_INICIAL, CONFIG.INTERVALO_FINAL, d) * rand(0.75, 1.25);
+      J.proximaAparicion = lerp(CONFIG.INTERVALO_INICIAL, CONFIG.INTERVALO_FINAL, d) * rand(0.75, 1.25) * (tanda > 1 ? 1.6 : 1);
     }
     if (tiempoRestante() <= CONFIG.DURACION_JEFE) iniciarJefe();
   } else if (J.fase === 'jefe') {
@@ -693,16 +731,36 @@ function puntosConMultiplicador(base) {
   return base * (J.modoLuz > 0 ? CONFIG.MULTIPLICADOR_MODO_LUZ : 1);
 }
 
-function romperCalabaza(o) {
+// angulo = dirección del corte (si se cortó deslizando); null = se rompió con un toque
+function romperCalabaza(o, angulo = null) {
   const dorada = o.tipo === 'dorada';
   const pts = puntosConMultiplicador(CONFIG.PUNTOS_CALABAZA * (dorada ? CONFIG.MULTIPLICADOR_DORADA : 1));
   J.puntos += pts;
   o.estado = 'roto';
   J.objetos.splice(J.objetos.indexOf(o), 1);
-  explosionLuz(o.x, o.y, dorada ? 1.4 : 1, dorada);
+  if (angulo === null) {
+    explosionLuz(o.x, o.y, dorada ? 1.4 : 1, dorada);
+  } else {
+    // Dos mitades que salen despedidas hacia los costados del corte y caen girando
+    const nx = -Math.sin(angulo), ny = Math.cos(angulo);
+    const rot0 = o.giro + Math.sin(o.t * 2.2 + o.fase) * 0.12;
+    for (const lado of [-1, 1]) {
+      const v = rand(110, 170) * U;
+      particulas.push({ tipo: 'mitad', dorada, lado, corte: angulo, x: o.x, y: o.y, tam: o.r * 2.35,
+        vx: o.vx * 0.4 + nx * v * lado, vy: Math.min(o.vy, 0) * 0.3 + ny * v * lado - 60 * U,
+        vida: 0, max: 1.8, rot: rot0, rot0, vr: lado * rand(2, 4.5) });
+    }
+    explosionLuz(o.x, o.y, dorada ? 1.1 : 0.75, dorada);
+    Sonido.corte();
+  }
   textoFlotante('+' + pts, o.x, o.y - o.r, dorada ? '#fff6b0' : COLOR.amarillo, dorada ? 34 : 28);
   if (dorada) {
     Sonido.estrella();
+    // La calabaza dorada devuelve una estrellita de vida
+    if (CONFIG.DORADA_DEVUELVE_VIDA && J.vidas < CONFIG.VIDAS) {
+      J.vidas++;
+      textoFlotante('+1 ⭐', o.x, o.y + o.r, '#ffffff', 26);
+    }
     const frase = TEXTOS.FRASES_DORADA[J.fraseIdx % TEXTOS.FRASES_DORADA.length];
     J.fraseIdx++;
     mostrarBanner('✨ ' + frase + ' ✨', '', '#fff6b0', 2.6);
@@ -868,6 +926,7 @@ function dibujarJuego() {
   dibujarObjetos();
   dibujarJefe();
   dibujarParticulas();
+  dibujarEstelas();
   dibujarFlotantes();
   ctx.restore();
   if (J.proteccion > 0) {               // borde suave al perder una vida
@@ -983,7 +1042,7 @@ function dibujarMensajeFinal() {
   const g = ctx.createRadialGradient(0, cyCruz, 4, 0, cyCruz, 60 * U);
   g.addColorStop(0, 'rgba(255,245,180,0.9)'); g.addColorStop(1, 'rgba(255,245,180,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, cyCruz, 60 * U, 0, Math.PI * 2); ctx.fill();
-  dibujarEmoji('✝️', 0, cyCruz, 64 * U);
+  dibujarLogo(0, cyCruz, 72 * U, false);
   textoEnRenglones(TEXTOS.MENSAJE_FINAL, 0, cyCruz + 50 * U + altoMsg / 2, tamMsg, anchoMax - 40, COLOR.amarillo);
   const sub = f.motivo === 'jefe' ? TEXTOS.FINAL_JEFE : f.motivo === 'tiempo' ? TEXTOS.FINAL_TIEMPO : TEXTOS.FINAL_VIDAS;
   textoEnRenglones(sub, 0, alto / 2 - 40 * U, 19 * U, anchoMax - 50, '#ffffff', { borde: false, peso: '700' });
@@ -1161,7 +1220,13 @@ function dibujarInicio() {
   // Instrucciones y récord
   const yInst = centro(6) - tamInst * 1.3;
   texto(TEXTOS.INSTRUCCION_1, W / 2, yInst, tamQueEntra(TEXTOS.INSTRUCCION_1, tamInst, ancho, '700'), '#ffffff', { peso: '700', borde: false });
-  texto(TEXTOS.INSTRUCCION_2, W / 2, yInst + tamInst * 1.35, tamQueEntra(TEXTOS.INSTRUCCION_2, tamInst, ancho, '700'), '#ffffff', { peso: '700', borde: false });
+  // Segunda línea + logo M.I.L. al final (también es un tesoro)
+  const tamI2 = tamQueEntra(TEXTOS.INSTRUCCION_2, tamInst, ancho - tamInst * 2, '700');
+  ctx.font = `700 ${tamI2}px ${FUENTE}`;
+  const anchoI2 = ctx.measureText(TEXTOS.INSTRUCCION_2).width, tamMini = tamI2 * 1.35;
+  const yI2 = yInst + tamInst * 1.35, xI2 = W / 2 - (tamMini + 6) / 2;
+  texto(TEXTOS.INSTRUCCION_2, xI2, yI2, tamI2, '#ffffff', { peso: '700', borde: false });
+  dibujarLogo(xI2 + anchoI2 / 2 + 6 + tamMini / 2, yI2, tamMini, false);
   if (J.mejor > 0) texto(`🏆 ${TEXTOS.MEJOR}: ${J.mejor}`, W / 2, yInst + tamInst * 2.7, tamInst, COLOR.amarillo, { peso: '800', borde: false });
   dibujarParticulas();
 }
@@ -1214,7 +1279,7 @@ function dibujarPregunta() {
   boton('respJesus', x2, yB, bw, bh, '', '#8fd3ff', '#3a6fd8', () => responder(true), {
     latido: p.estado === 'casi',
     dibujo: (w, h) => {
-      dibujarEmoji('✝️', 0, -h * 0.12, Math.min(w, h) * 0.48);
+      dibujarLogo(0, -h * 0.12, Math.min(w, h) * 0.5, false);
       texto(TEXTOS.RESP_JESUS, 0, h * 0.3, tamQueEntra(TEXTOS.RESP_JESUS, h * 0.2, w - 20), '#ffffff', { colorBorde: 'rgba(20,40,110,0.7)' });
     },
   });
@@ -1353,22 +1418,122 @@ function alTocar(x, y) {
     const d = Math.hypot(x - o.x, y - o.y);
     if (d <= o.r * 1.25 && d < mejorD) { mejor = o; mejorD = d; }
   }
-  if (mejor) { romperCalabaza(mejor); return; }
+  if (mejor) { romperCalabaza(mejor); return 'calabaza'; }
   for (const o of J.objetos) {
     if (o.estado !== 'vivo' || o.tipo !== 'tesoro') continue;
     if (Math.hypot(x - o.x, y - o.y) <= o.r * 0.9) { tocarTesoro(o); return; }
   }
 }
 
+/* ---- Corte deslizando: cada dedo (o el mouse apretado) dibuja una estela de luz ---- */
+const pasadas = new Map();   // pointerId → pasada activa
+let estelas = [];            // estelas de luz (se siguen desvaneciendo al soltar)
+
+function puedeCortar() { return J.pantalla === 'juego' && !J.pausado && J.fase !== 'final'; }
+
+// Distancia del punto (px, py) al segmento A-B
+function distSegmento(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  const t = l2 ? clamp(((px - ax) * dx + (py - ay) * dy) / l2, 0, 1) : 0;
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
+
+function golpeDePasada(p, x, y) {
+  if (J.reloj - p.ultimoGolpe < CONFIG.PAUSA_GOLPE_JEFE) return;
+  p.ultimoGolpe = J.reloj; p.recorridoJefe = 0;
+  golpearJefe(x, y);
+}
+
+function moverPasada(p, x, y) {
+  const dx = x - p.x, dy = y - p.y, largo = Math.hypot(dx, dy);
+  if (largo < 3) return;
+  p.estela.puntos.push({ x, y, t: J.reloj });
+  if (J.fase === 'jefe') {
+    // Al jefe: cada vez que la estela entra, y cada tanto recorrido adentro, le saca energía
+    const j = J.jefe;
+    if (j && !j.roto && j.t > 0.5) {
+      const dentro = distSegmento(j.x, j.y, p.x, p.y, x, y) <= j.r * 0.95;
+      if (dentro && !p.enJefe) golpeDePasada(p, x, y);
+      else if (dentro) { p.recorridoJefe += largo; if (p.recorridoJefe >= j.r * 0.8) golpeDePasada(p, x, y); }
+      p.enJefe = dentro;
+    }
+  } else if (J.fase === 'normal') {
+    const angulo = Math.atan2(dy, dx);
+    for (const o of J.objetos.slice()) {
+      if (o.estado !== 'vivo') continue;
+      const d = distSegmento(o.x, o.y, p.x, p.y, x, y);
+      if (o.tipo === 'tesoro') { if (d <= o.r * 0.45) tocarTesoro(o); }   // perdonamos los roces
+      else if (d <= o.r * 0.95) { romperCalabaza(o, angulo); p.cortadas++; }
+    }
+  }
+  p.x = x; p.y = y;
+}
+
+function terminarPasada(id) {
+  const p = pasadas.get(id);
+  if (!p) return;
+  pasadas.delete(id);
+  // Combo por cortar varias calabazas de una sola pasada
+  if (p.cortadas >= 2 && J.pantalla === 'juego') {
+    const bonus = puntosConMultiplicador(CONFIG.BONUS_CORTE_MULTIPLE * p.cortadas);
+    J.puntos += bonus;
+    textoFlotante(`${TEXTOS.CORTE_MULTIPLE}${p.cortadas}! +${bonus}`, p.x, p.y - 50 * U, '#fff6b0', 30);
+    Sonido.combo(p.cortadas);
+  }
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   Sonido.iniciar();
-  alTocar(e.clientX, e.clientY);
+  const tocoBoton = !!botonEn(e.clientX, e.clientY);
+  const rompio = alTocar(e.clientX, e.clientY) === 'calabaza';   // si arrancó sobre una calabaza, cuenta para el corte múltiple
+  if (!tocoBoton && puedeCortar()) {
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* no pasa nada */ }
+    const estela = { puntos: [{ x: e.clientX, y: e.clientY, t: J.reloj }] };
+    estelas.push(estela);
+    const j = J.jefe;
+    const enJefe = J.fase === 'jefe' && j && Math.hypot(e.clientX - j.x, e.clientY - j.y) <= j.r * 0.95;
+    // Si el dedo se apoyó sobre el jefe, ese toque ya le pegó: la pasada espera un poquito antes del próximo golpe
+    pasadas.set(e.pointerId, { estela, x: e.clientX, y: e.clientY, cortadas: rompio ? 1 : 0, enJefe, recorridoJefe: 0, ultimoGolpe: enJefe ? J.reloj : -Infinity });
+  }
 }, { passive: false });
 
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'mouse') canvas.style.cursor = botonEn(e.clientX, e.clientY) ? 'pointer' : (J.pantalla === 'juego' ? 'crosshair' : 'default');
+  const p = pasadas.get(e.pointerId);
+  if (!p) return;
+  if (!puedeCortar()) { terminarPasada(e.pointerId); return; }
+  const lista = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  for (const ev of (lista.length ? lista : [e])) moverPasada(p, ev.clientX, ev.clientY);
 });
+
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) =>
+  canvas.addEventListener(ev, (e) => terminarPasada(e.pointerId)));
+
+function actualizarEstelas() {
+  const activas = new Set([...pasadas.values()].map(p => p.estela));
+  for (const es of estelas) es.puntos = es.puntos.filter(pt => J.reloj - pt.t < CONFIG.DURACION_ESTELA);
+  estelas = estelas.filter(es => es.puntos.length > 0 || activas.has(es));
+}
+
+function dibujarEstelas() {
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.globalCompositeOperation = 'lighter';
+  for (const es of estelas) {
+    const pts = es.puntos;
+    for (let pasada = 0; pasada < 2; pasada++) {        // 0 = brillo amarillo, 1 = centro blanco
+      for (let i = 1; i < pts.length; i++) {
+        const f = clamp(1 - (J.reloj - pts[i].t) / CONFIG.DURACION_ESTELA, 0, 1);
+        const ancho = (pasada === 0 ? 16 : 6) * U * (0.3 + 0.7 * f);
+        ctx.strokeStyle = pasada === 0 ? `rgba(255,210,63,${0.55 * f})` : `rgba(255,255,240,${0.95 * f})`;
+        ctx.lineWidth = ancho;
+        ctx.beginPath(); ctx.moveTo(pts[i - 1].x, pts[i - 1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
 
 // Sin scroll, sin zoom y sin menú contextual
 ['touchmove', 'gesturestart', 'gesturechange', 'dblclick', 'contextmenu'].forEach((ev) =>
@@ -1403,6 +1568,7 @@ function actualizar(dt) {
   if (J.pantalla === 'juego') actualizarJuego(dt);
   if (J.pantalla === 'pregunta') J.pregunta.t += dt;
   if (!J.pausado) actualizarEfectos(dt);
+  actualizarEstelas();
 }
 
 function dibujarCielo() {
