@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b2560">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Juego para chicos del Ministerio Internacional Libertad: rompé las calabazas del miedo con la Luz de Jesús.">
+<title>Misión Luz: ¡Rompe las Calabazas del Miedo!</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #1b2560;
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  /* Elemento invisible para leer los márgenes seguros (notch) del celular */
+  #seguro {
+    position: fixed; top: 0; left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  noscript { position: fixed; inset: 0; display: grid; place-items: center; color: #fff; font: 700 20px sans-serif; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+<canvas id="juego" aria-label="Juego Misión Luz"></canvas>
+<div id="seguro"></div>
+<noscript>Para jugar a Misión Luz necesitás activar JavaScript.</noscript>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   MISIÓN LUZ: ¡ROMPE LAS CALABAZAS DEL MIEDO!
+   Juego infantil del Ministerio Internacional Libertad (M.I.L.)
+   Todo en un solo archivo: HTML + CSS + JavaScript, sin librerías.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1) CONFIGURACIÓN: cambiá estos números para ajustar el juego
+   --------------------------------------------------------------------- */
+const CONFIG = {
+  DURACION_JUEGO: 75,          // segundos que dura la partida
+  DURACION_JEFE: 10,           // la calabaza gigante aparece en los últimos N segundos
+  VIDAS: 3,                    // estrellitas de vida
+  TERMINAR_SIN_VIDAS: true,    // si se quedan sin vidas, la partida termina (con un final amable)
+
+  PUNTOS_CALABAZA: 10,
+  MULTIPLICADOR_DORADA: 3,     // la calabaza dorada vale x3
+  COMBO_PARA_MODO_LUZ: 5,      // calabazas seguidas para activar el MODO LUZ
+  DURACION_MODO_LUZ: 8,        // segundos
+  MULTIPLICADOR_MODO_LUZ: 2,   // puntos x2 en MODO LUZ
+
+  TOQUES_JEFE: 22,             // toques necesarios para romper la calabaza gigante
+  PUNTOS_TOQUE_JEFE: 3,
+  PUNTOS_JEFE: 200,            // premio por romperla
+  BONUS_POR_SEGUNDO: 10,       // premio por cada segundo que sobre al romper al jefe
+  BONUS_PREGUNTA: 50,          // premio por acertar la pregunta final a la primera
+
+  // Dificultad: va del valor INICIAL al FINAL suavemente durante el juego
+  INTERVALO_INICIAL: 1.15,     // segundos entre una aparición y otra
+  INTERVALO_FINAL: 0.5,
+  VELOCIDAD_INICIAL: 0.17,     // en "altos de pantalla por segundo"
+  VELOCIDAD_FINAL: 0.33,
+  MAX_OBJETOS_INICIAL: 4,      // objetos en pantalla a la vez
+  MAX_OBJETOS_FINAL: 9,
+  PROB_TESORO_INICIAL: 0.16,   // probabilidad de que salga un tesoro en vez de calabaza
+  PROB_TESORO_FINAL: 0.24,
+  DORADA_CADA_MIN: 6,          // cada cuántos segundos (mínimo y máximo) sale una dorada
+  DORADA_CADA_MAX: 10,
+  PROTECCION_TRAS_ERROR: 1.0,  // segundos sin poder perder otra vida
+
+  ESTRELLAS_2: 350,            // puntaje para 2 estrellas
+  ESTRELLAS_3: 800,            // puntaje para 3 estrellas
+
+  LOGO: 'logo.png',            // archivo del logo de la iglesia (misma carpeta)
+};
+
+/* ---------------------------------------------------------------------
+   2) TEXTOS: todo lo que leen los chicos y los papás
+   --------------------------------------------------------------------- */
+const TEXTOS = {
+  TITULO: 'MISIÓN LUZ',
+  SUBTITULO: '¡Rompe las Calabazas del Miedo!',
+  LEMA: '¡Rompé las calabazas del miedo con la Luz de Jesús!',
+  JUGAR: '¡JUGAR!',
+  INSTRUCCION_1: 'Tocá las 🎃 para romperlas con luz',
+  INSTRUCCION_2: 'No toques los tesoros 📖 ❤️ 🕊️ ✝️',
+  MEJOR: 'Mejor puntaje',
+  INICIO_PARTIDA: '¡A brillar!',
+  INICIO_PARTIDA_SUB: 'Tocá las calabazas 🎃',
+  FRASES_DORADA: [
+    'Jesús es la luz del mundo',
+    'La luz brilla en las tinieblas',
+    'Dios no nos dio espíritu de miedo',
+    'Con Jesús no tengo miedo',
+  ],
+  TESORO_TOCADO: '¡Es un tesoro! Cuidalo 💛',
+  MODO_LUZ: '¡MODO LUZ!',
+  MODO_LUZ_SUB: 'Puntos x2',
+  JEFE_LLEGA: '¡La calabaza gigante!',
+  JEFE_LLEGA_SUB: '¡Tocala muchas veces!',
+  JEFE_NOMBRE: 'Calabaza gigante',
+  MENSAJE_FINAL: '¡Nosotros celebramos a Jesús, no Halloween!',
+  FINAL_JEFE: '¡Rompiste la calabaza gigante!',
+  FINAL_TIEMPO: '¡La Luz de Jesús siempre gana!',
+  FINAL_VIDAS: '¡Buen intento! La Luz de Jesús siempre gana.',
+  SEGUIR: '¡Seguir! ➜',
+  PREGUNTA: '¿A quién celebramos?',
+  RESP_JESUS: 'Jesús',
+  CASI: '¡Casi! Celebramos a Jesús, la Luz del mundo.',
+  CASI_SUB: 'Tocá a Jesús ✝️',
+  BIEN: '¡Muy bien!',
+  BIEN_SUB: '¡Celebramos a Jesús, la Luz del mundo!',
+  VER_RESULTADO: 'Ver mi resultado ➜',
+  RESULTADO: '¡Misión cumplida!',
+  PUNTOS: 'Puntos',
+  NUEVO_RECORD: '¡Nuevo récord! 🎉',
+  PAPAS_TITULO: 'Para los papás',
+  PAPAS: 'Hoy aprendimos que Jesús es la luz y no tenemos miedo.',
+  VERSICULO: '«Yo soy la luz del mundo» — Juan 8:12',
+  JUGAR_DE_NUEVO: 'Jugar de nuevo',
+  PAUSA: 'Pausa',
+  PAUSA_SEGUIR: '¡Seguir jugando!',
+  IGLESIA: 'Ministerio Internacional Libertad',
+};
+
+// Colores principales
+const COLOR = {
+  naranja: '#ff9f1c', naranjaOsc: '#e8590c',
+  amarillo: '#ffd23f', amarilloClaro: '#fff3a0',
+  violeta: '#b8a1ff', violetaOsc: '#6c4fd1',
+  noche: '#1b2560', nocheMedia: '#2d2a7a',
+  blanco: '#ffffff', tinta: '#1a1446',
+  verde: '#5ed38a', celeste: '#7bdff2', rosa: '#ff7aa8',
+};
+const CONFETI = [COLOR.naranja, COLOR.amarillo, COLOR.violeta, COLOR.celeste, COLOR.rosa, '#ffffff'];
+const TESOROS = ['📖', '❤️', '🕊️', '✝️'];
+const FUENTE = '"Arial Rounded MT Bold","Varela Round","Nunito","Baloo 2","Trebuchet MS","Segoe UI",system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"';
+const FUENTE_EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+
+/* ---------------------------------------------------------------------
+   3) UTILIDADES
+   --------------------------------------------------------------------- */
+const rand = (a, b) => a + Math.random() * (b - a);
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const elegir = (lista) => lista[(Math.random() * lista.length) | 0];
+const suave = (t) => t * t * (3 - 2 * t);                    // curva suave 0→1
+const rebote = (t) => { t = clamp(t, 0, 1); const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+
+// Guardado seguro (puede fallar en modo privado)
+const Guardado = {
+  leer(clave, porDefecto) {
+    try { const v = localStorage.getItem(clave); return v === null ? porDefecto : JSON.parse(v); }
+    catch (e) { return porDefecto; }
+  },
+  escribir(clave, valor) {
+    try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) { /* sin guardado, el juego sigue igual */ }
+  },
+};
+
+/* ---------------------------------------------------------------------
+   4) LIENZO (canvas) responsive y nítido
+   --------------------------------------------------------------------- */
+const canvas = document.getElementById('juego');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1, SEG_ARRIBA = 0, SEG_ABAJO = 0, U = 1;
+let fondo = null;               // fondo pre-dibujado (para que vaya rápido)
+let estrellasCielo = [];
+
+function redimensionar() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const s = getComputedStyle(document.getElementById('seguro'));
+  SEG_ARRIBA = parseFloat(s.paddingTop) || 0;
+  SEG_ABAJO = parseFloat(s.paddingBottom) || 0;
+  // U = unidad de diseño (1 = celular de 375 px de ancho)
+  U = clamp(Math.min(W, (H - SEG_ARRIBA - SEG_ABAJO) * 0.6) / 375, 0.55, 1.7);
+  crearFondo();
+  estrellasCielo = [];
+  const cant = Math.round(clamp(W * H / 9000, 30, 110));
+  for (let i = 0; i < cant; i++) {
+    estrellasCielo.push({ x: Math.random() * W, y: Math.random() * H * 0.8, r: rand(0.6, 1.8), f: rand(0.5, 2), fase: rand(0, 6.28) });
+  }
+  // Si achicaron la ventana, que nada quede afuera
+  for (const o of J.objetos) o.x0 = clamp(o.x0, o.r, Math.max(o.r, W - o.r));
+}
+
+// Camino de rectángulo redondeado
+function rr(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// Estrella de N puntas
+function caminoEstrella(c, x, y, r, puntas = 5, interior = 0.5, giro = -Math.PI / 2) {
+  c.beginPath();
+  for (let i = 0; i < puntas * 2; i++) {
+    const rad = i % 2 === 0 ? r : r * interior;
+    const a = giro + (i * Math.PI) / puntas;
+    const px = x + Math.cos(a) * rad, py = y + Math.sin(a) * rad;
+    if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+  }
+  c.closePath();
+}
+
+// Texto con borde (bien legible sobre cualquier fondo)
+function texto(t, x, y, tam, color = COLOR.blanco, opciones = {}) {
+  const { alinear = 'center', peso = '900', borde = true, colorBorde = 'rgba(26,20,70,0.85)', base = 'middle' } = opciones;
+  ctx.font = `${peso} ${tam}px ${FUENTE}`;
+  ctx.textAlign = alinear; ctx.textBaseline = base;
+  if (borde) {
+    ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, tam * 0.18); ctx.strokeStyle = colorBorde;
+    ctx.strokeText(t, x, y);
+  }
+  ctx.fillStyle = color; ctx.fillText(t, x, y);
+}
+
+// Achica el tamaño hasta que el texto entre en el ancho
+function tamQueEntra(t, tam, anchoMax, peso = '900') {
+  ctx.font = `${peso} ${tam}px ${FUENTE}`;
+  const w = ctx.measureText(t).width;
+  return w > anchoMax ? Math.max(8, Math.floor(tam * anchoMax / w)) : tam;
+}
+
+// Parte un texto en renglones
+function renglones(t, tam, anchoMax, peso = '900') {
+  ctx.font = `${peso} ${tam}px ${FUENTE}`;
+  const palabras = t.split(' '); const lineas = []; let actual = '';
+  for (const p of palabras) {
+    const prueba = actual ? actual + ' ' + p : p;
+    if (ctx.measureText(prueba).width > anchoMax && actual) { lineas.push(actual); actual = p; }
+    else actual = prueba;
+  }
+  if (actual) lineas.push(actual);
+  return lineas;
+}
+
+function textoEnRenglones(t, x, y, tam, anchoMax, color, opciones = {}) {
+  const lineas = renglones(t, tam, anchoMax, opciones.peso);
+  const alto = tam * 1.22;
+  const y0 = y - ((lineas.length - 1) * alto) / 2;
+  lineas.forEach((l, i) => texto(l, x, y0 + i * alto, tam, color, opciones));
+  return lineas.length * alto;
+}
+
+/* ---------------------------------------------------------------------
+   5) DIBUJOS PRE-CALCULADOS (sprites): calabazas, emojis y fondo
+   --------------------------------------------------------------------- */
+function crearCalabaza(px, dorada) {
+  const c = document.createElement('canvas'); c.width = c.height = px;
+  const g = c.getContext('2d');
+  const cx = px / 2, cy = px * 0.56, R = px * 0.42;
+  const claro = dorada ? '#fff6b0' : '#ffc46b';
+  const medio = dorada ? '#ffd23f' : '#ff9f1c';
+  const oscuro = dorada ? '#e0a100' : '#ef6c12';
+  const linea = dorada ? 'rgba(170,110,0,0.35)' : 'rgba(170,60,0,0.35)';
+
+  // Tallo y hojita
+  g.fillStyle = '#5d8a3a';
+  rr(g, cx - px * 0.045, cy - R * 0.86 - px * 0.13, px * 0.09, px * 0.17, px * 0.03); g.fill();
+  g.fillStyle = '#7cc24a';
+  g.beginPath(); g.ellipse(cx + px * 0.11, cy - R * 0.88, px * 0.085, px * 0.042, -0.45, 0, Math.PI * 2); g.fill();
+
+  // Gajos (de afuera hacia adentro)
+  const gajos = [[-0.5, 0.55], [0.5, 0.55], [-0.22, 0.62], [0.22, 0.62], [0, 0.6]];
+  for (const [dx, ancho] of gajos) {
+    const x = cx + dx * R, rx = R * ancho, ry = R * 0.86;
+    const grad = g.createRadialGradient(x - rx * 0.3, cy - ry * 0.45, rx * 0.1, x, cy, Math.max(rx, ry));
+    grad.addColorStop(0, claro); grad.addColorStop(0.55, medio); grad.addColorStop(1, oscuro);
+    g.fillStyle = grad;
+    g.beginPath(); g.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = linea; g.lineWidth = px * 0.012; g.stroke();
+  }
+
+  // Carita simpática (ojos redondos, cachetes y sonrisa)
+  const ey = cy - R * 0.1, ex = R * 0.3, er = R * 0.12;
+  g.fillStyle = '#4a2511';
+  g.beginPath(); g.ellipse(cx - ex, ey, er * 0.85, er * 1.1, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(cx + ex, ey, er * 0.85, er * 1.1, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ffffff';
+  g.beginPath(); g.arc(cx - ex + er * 0.28, ey - er * 0.4, er * 0.36, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(cx + ex + er * 0.28, ey - er * 0.4, er * 0.36, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,90,130,0.45)';
+  g.beginPath(); g.ellipse(cx - R * 0.5, cy + R * 0.13, R * 0.13, R * 0.085, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(cx + R * 0.5, cy + R * 0.13, R * 0.13, R * 0.085, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#4a2511'; g.lineWidth = R * 0.075; g.lineCap = 'round';
+  g.beginPath(); g.arc(cx, cy + R * 0.06, R * 0.24, 0.18 * Math.PI, 0.82 * Math.PI); g.stroke();
+
+  // Brillito
+  g.fillStyle = 'rgba(255,255,255,0.55)';
+  g.beginPath(); g.ellipse(cx - R * 0.55, cy - R * 0.45, R * 0.12, R * 0.06, -0.7, 0, Math.PI * 2); g.fill();
+  if (dorada) {
+    g.fillStyle = '#ffffff';
+    caminoEstrella(g, cx + R * 0.62, cy - R * 0.5, R * 0.16, 4, 0.35); g.fill();
+    caminoEstrella(g, cx - R * 0.2, cy + R * 0.55, R * 0.09, 4, 0.35); g.fill();
+  }
+  return c;
+}
+
+const cacheEmoji = new Map();
+function spriteEmoji(e) {
+  if (cacheEmoji.has(e)) return cacheEmoji.get(e);
+  const px = 128, c = document.createElement('canvas'); c.width = c.height = px;
+  const g = c.getContext('2d');
+  g.font = `${px * 0.78}px ${FUENTE_EMOJI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(e, px / 2, px * 0.54);
+  cacheEmoji.set(e, c);
+  return c;
+}
+function dibujarEmoji(e, x, y, tam, alfa = 1) {
+  const s = spriteEmoji(e);
+  ctx.globalAlpha = alfa;
+  ctx.drawImage(s, x - tam / 2, y - tam / 2, tam, tam);
+  ctx.globalAlpha = 1;
+}
+
+let SPRITE_CALABAZA, SPRITE_DORADA, SPRITE_JEFE;
+
+function crearFondo() {
+  fondo = document.createElement('canvas');
+  fondo.width = Math.max(1, Math.round(W * DPR)); fondo.height = Math.max(1, Math.round(H * DPR));
+  const g = fondo.getContext('2d'); g.scale(DPR, DPR);
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#1b2560'); grad.addColorStop(0.55, '#2d2a7a'); grad.addColorStop(1, '#4b3a8f');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  // Luna amigable con brillo
+  const lx = W * 0.84, ly = H * 0.2, lr = Math.min(W, H) * 0.07;
+  const halo = g.createRadialGradient(lx, ly, lr * 0.5, lx, ly, lr * 3.2);
+  halo.addColorStop(0, 'rgba(255,243,160,0.35)'); halo.addColorStop(1, 'rgba(255,243,160,0)');
+  g.fillStyle = halo; g.fillRect(lx - lr * 4, ly - lr * 4, lr * 8, lr * 8);
+  g.fillStyle = '#fff6c9'; g.beginPath(); g.arc(lx, ly, lr, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(230,214,150,0.6)';
+  g.beginPath(); g.arc(lx - lr * 0.3, ly - lr * 0.2, lr * 0.18, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(lx + lr * 0.35, ly + lr * 0.3, lr * 0.12, 0, Math.PI * 2); g.fill();
+  // Lomas suaves abajo
+  const lomas = [['#3d3184', 0.86, 0.06], ['#2b2468', 0.92, 0.05]];
+  for (const [col, base, alto] of lomas) {
+    g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, H * base - Math.sin(x / W * Math.PI * 2 + base * 9) * H * alto * 0.5 - H * alto * 0.5);
+    g.lineTo(W, H); g.closePath(); g.fill();
+  }
+}
+
+// Logo de la iglesia (si no carga, se dibuja "M.I.L.")
+const logo = new Image();
+let logoListo = false;
+logo.onload = () => { logoListo = logo.naturalWidth > 0; };
+logo.onerror = () => { logoListo = false; };
+logo.src = CONFIG.LOGO;
+
+function dibujarLogo(x, y, tam) {
+  // halo de luz detrás
+  const h = ctx.createRadialGradient(x, y, tam * 0.3, x, y, tam * 0.85);
+  h.addColorStop(0, 'rgba(255,230,140,0.45)'); h.addColorStop(1, 'rgba(255,230,140,0)');
+  ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, tam * 0.85, 0, Math.PI * 2); ctx.fill();
+  if (logoListo) {
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, tam / 2, 0, Math.PI * 2); ctx.clip();
+    ctx.drawImage(logo, x - tam / 2, y - tam / 2, tam, tam);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#16245e'; ctx.beginPath(); ctx.arc(x, y, tam / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = COLOR.amarillo; ctx.lineWidth = tam * 0.05; ctx.stroke();
+    texto('M.I.L.', x, y + tam * 0.02, tam * 0.3, COLOR.blanco, { borde: false });
+  }
+}
+
+/* ---------------------------------------------------------------------
+   6) SONIDOS con WebAudio (sin archivos)
+   --------------------------------------------------------------------- */
+const Sonido = {
+  ctx: null, maestro: null, bufRuido: null,
+  silencio: Guardado.leer('misionLuz.silencio', false),
+
+  iniciar() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try {
+        this.ctx = new AC();
+        this.maestro = this.ctx.createGain();
+        this.maestro.gain.value = this.silencio ? 0 : 0.6;
+        this.maestro.connect(this.ctx.destination);
+        const n = Math.floor(this.ctx.sampleRate * 0.4);
+        this.bufRuido = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+        const d = this.bufRuido.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      } catch (e) { this.ctx = null; return; }
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+  },
+
+  tono(frec, dur, tipo = 'sine', vol = 0.25, frecFin = 0, retraso = 0) {
+    if (!this.ctx || this.silencio) return;
+    const t = this.ctx.currentTime + retraso;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = tipo; o.frequency.setValueAtTime(frec, t);
+    if (frecFin) o.frequency.exponentialRampToValueAtTime(frecFin, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.maestro);
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+
+  ruido(dur, vol, frec, retraso = 0) {
+    if (!this.ctx || this.silencio) return;
+    const t = this.ctx.currentTime + retraso;
+    const s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.bufRuido; f.type = 'bandpass'; f.frequency.value = frec; f.Q.value = 0.8;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.maestro);
+    s.start(t); s.stop(t + dur + 0.05);
+  },
+
+  pop()      { this.ruido(0.09, 0.35, 1600); this.tono(420, 0.14, 'sine', 0.3, 1100); },
+  estrella() { [880, 1175, 1568, 2093].forEach((f, i) => this.tono(f, 0.18, 'triangle', 0.16, 0, i * 0.06)); },
+  error()    { this.tono(440, 0.2, 'sine', 0.18, 370); this.tono(370, 0.3, 'sine', 0.14, 294, 0.16); },
+  modoLuz()  { this.tono(300, 0.5, 'triangle', 0.18, 1200); [784, 988, 1175].forEach((f, i) => this.tono(f, 0.25, 'sine', 0.12, 0, 0.3 + i * 0.08)); },
+  golpe(p)   { this.ruido(0.07, 0.3, 700 + p * 900); this.tono(160 + p * 260, 0.12, 'square', 0.08, 90 + p * 200); },
+  victoria() {
+    const notas = [523, 659, 784, 1047, 784, 1047, 1319];
+    notas.forEach((f, i) => { this.tono(f, 0.28, 'triangle', 0.2, 0, i * 0.11); this.tono(f / 2, 0.28, 'sine', 0.1, 0, i * 0.11); });
+    this.ruido(0.6, 0.25, 2500);
+  },
+  boton()    { this.tono(660, 0.08, 'sine', 0.18, 880); },
+
+  alternar() {
+    this.silencio = !this.silencio;
+    if (this.maestro) this.maestro.gain.value = this.silencio ? 0 : 0.6;
+    Guardado.escribir('misionLuz.silencio', this.silencio);
+  },
+};
+
+/* ---------------------------------------------------------------------
+   7) ESTADO DEL JUEGO
+   --------------------------------------------------------------------- */
+const J = {
+  pantalla: 'inicio',      // inicio | juego | pregunta | resultado
+  tPantalla: 0,            // segundos en la pantalla actual
+  reloj: 0,                // reloj general (animaciones)
+  pausado: false,
+  puntos: 0, vidas: CONFIG.VIDAS, transcurrido: 0,
+  combo: 0, modoLuz: 0, proteccion: 0,
+  objetos: [], proximaAparicion: 1, proximaDorada: 7, fraseIdx: 0,
+  fase: 'normal',          // normal | jefe | final
+  jefe: null, final: null,
+  banner: null, flash: 0, sacudida: 0,
+  pregunta: null, resultado: null,
+  mejor: Guardado.leer('misionLuz.mejor', 0),
+  heroe: Math.random() < 0.5 ? 'nena' : 'nene',
+};
+let particulas = [];
+let flotantes = [];
+let botones = [];          // botones visibles (se arman al dibujar)
+let presionado = null;     // botón tocado (para animarlo)
+
+function cambiarPantalla(p) {
+  J.pantalla = p; J.tPantalla = 0; J.pausado = false;
+  presionado = null;
+}
+
+function tiempoRestante() { return Math.max(0, CONFIG.DURACION_JUEGO - J.transcurrido); }
+function dificultad() { return suave(clamp(J.transcurrido / (CONFIG.DURACION_JUEGO - CONFIG.DURACION_JEFE), 0, 1)); }
+function radioObjeto() { return clamp(Math.min(W, H) * 0.095, 32, 58); }
+function hudAbajo() { return SEG_ARRIBA + 12 + 104 * Math.min(U, 1.2); }
+
+function iniciarJuego() {
+  Object.assign(J, {
+    puntos: 0, vidas: CONFIG.VIDAS, transcurrido: 0, combo: 0, modoLuz: 0, proteccion: 0,
+    objetos: [], proximaAparicion: 0.9, proximaDorada: rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX),
+    fase: 'normal', jefe: null, final: null, flash: 0, sacudida: 0, pregunta: null, resultado: null,
+  });
+  particulas = []; flotantes = [];
+  cambiarPantalla('juego');
+  mostrarBanner(TEXTOS.INICIO_PARTIDA, TEXTOS.INICIO_PARTIDA_SUB, COLOR.amarillo, 2);
+}
+
+function mostrarBanner(titulo, sub, color, duracion = 2.2) {
+  J.banner = { titulo, sub, color, t: 0, dur: duracion };
+}
+
+/* ---------------------------------------------------------------------
+   8) OBJETOS: calabazas, calabaza dorada y tesoros
+   --------------------------------------------------------------------- */
+function crearObjeto(tipo) {
+  const r = tipo === 'dorada' ? radioObjeto() * 1.1 : radioObjeto();
+  // Elegimos un lugar que no pise a otro objeto recién salido
+  let x = rand(r + 8, W - r - 8);
+  for (let intento = 0; intento < 6; intento++) {
+    const choca = J.objetos.some(o => o.y > H - r * 3 && Math.abs(o.x0 - x) < r * 2.2);
+    if (!choca) break;
+    x = rand(r + 8, W - r - 8);
+  }
+  const vel = H * lerp(CONFIG.VELOCIDAD_INICIAL, CONFIG.VELOCIDAD_FINAL, dificultad()) * rand(0.85, 1.15);
+  J.objetos.push({
+    tipo, emoji: tipo === 'tesoro' ? elegir(TESOROS) : null,
+    x0: x, x, y: H + r + 6, r,
+    vy: -vel * (tipo === 'dorada' ? 0.8 : 1),
+    amp: rand(6, Math.min(36, W * 0.06)), frec: rand(0.9, 2), fase: rand(0, 6.28),
+    t: 0, estado: 'vivo', tEstado: 0,
+  });
+}
+
+function actualizarObjetos(dt) {
+  for (const o of J.objetos) {
+    o.t += dt;
+    if (o.estado === 'vivo') {
+      o.y += o.vy * dt;
+    } else {
+      o.tEstado += dt;
+      o.y += o.vy * dt * 0.4;
+    }
+    o.x = clamp(o.x0 + Math.sin(o.t * o.frec + o.fase) * o.amp, o.r * 0.6, W - o.r * 0.6);
+  }
+  J.objetos = J.objetos.filter(o =>
+    o.y > -o.r * 1.6 && !(o.estado !== 'vivo' && o.tEstado > 0.8));
+}
+
+function dibujarObjetos() {
+  for (const o of J.objetos) {
+    let alfa = 1, esc = 1;
+    if (o.estado === 'saliendo') { alfa = 1 - o.tEstado / 0.8; esc = 1 - o.tEstado * 0.3; }
+    if (o.estado === 'tocado') { alfa = 1 - o.tEstado / 0.8; esc = 1 + o.tEstado * 0.6; }
+    alfa = clamp(alfa, 0, 1);
+    const balanceo = Math.sin(o.t * 2.2 + o.fase) * 0.12;
+    ctx.save();
+    ctx.globalAlpha = alfa;
+    ctx.translate(o.x, o.y); ctx.rotate(balanceo); ctx.scale(esc, esc);
+    if (o.tipo === 'tesoro') {
+      // Burbuja de luz suave alrededor del tesoro
+      const g = ctx.createRadialGradient(0, 0, o.r * 0.2, 0, 0, o.r * 1.05);
+      g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(0.7, 'rgba(200,220,255,0.25)'); g.addColorStop(1, 'rgba(200,220,255,0.05)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.globalAlpha = alfa;
+      const s = spriteEmoji(o.emoji); const tam = o.r * 1.35;
+      ctx.drawImage(s, -tam / 2, -tam / 2, tam, tam);
+    } else {
+      if (o.tipo === 'dorada') {
+        const p = 0.75 + Math.sin(J.reloj * 6) * 0.25;
+        const g = ctx.createRadialGradient(0, 0, o.r * 0.4, 0, 0, o.r * 1.7);
+        g.addColorStop(0, `rgba(255,240,150,${0.7 * p})`); g.addColorStop(1, 'rgba(255,240,150,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 1.7, 0, Math.PI * 2); ctx.fill();
+      }
+      const s = o.tipo === 'dorada' ? SPRITE_DORADA : SPRITE_CALABAZA;
+      const tam = o.r * 2.35;
+      ctx.drawImage(s, -tam / 2, -tam * 0.56, tam, tam);
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------------------------------------------------------------
+   9) EFECTOS: explosiones de luz, estrellas, confeti y textos flotantes
+   --------------------------------------------------------------------- */
+function explosionLuz(x, y, escala = 1, dorada = false) {
+  particulas.push({ tipo: 'anillo', x, y, vida: 0, max: 0.5, tam: 60 * escala * U });
+  particulas.push({ tipo: 'destello', x, y, vida: 0, max: 0.35, tam: 70 * escala * U });
+  const nEstrellas = Math.round((dorada ? 14 : 8) * escala), nConfeti = Math.round((dorada ? 18 : 12) * escala);
+  for (let i = 0; i < nEstrellas; i++) {
+    const a = rand(0, Math.PI * 2), v = rand(120, 320) * escala * U;
+    particulas.push({ tipo: 'estrella', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, vida: 0, max: rand(0.6, 1.1),
+      tam: rand(6, 12) * U * Math.sqrt(escala), color: dorada || Math.random() < 0.6 ? COLOR.amarillo : '#ffffff', rot: rand(0, 6), vr: rand(-6, 6) });
+  }
+  for (let i = 0; i < nConfeti; i++) {
+    const a = rand(0, Math.PI * 2), v = rand(100, 300) * escala * U;
+    particulas.push({ tipo: 'confeti', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, vida: 0, max: rand(0.9, 1.6),
+      tam: rand(5, 9) * U, color: elegir(CONFETI), rot: rand(0, 6), vr: rand(-10, 10) });
+  }
+  if (particulas.length > 600) particulas.splice(0, particulas.length - 600);
+}
+
+function lluviaConfeti(cant = 60) {
+  for (let i = 0; i < cant; i++) {
+    particulas.push({ tipo: 'confeti', x: rand(0, W), y: rand(-H * 0.3, -10), vx: rand(-40, 40), vy: rand(60, 200), vida: 0, max: rand(2.5, 4),
+      tam: rand(6, 10) * U, color: elegir(CONFETI), rot: rand(0, 6), vr: rand(-8, 8) });
+  }
+}
+
+function brilloToque(x, y) {
+  particulas.push({ tipo: 'anillo', x, y, vida: 0, max: 0.3, tam: 26 * U });
+}
+
+function textoFlotante(t, x, y, color = COLOR.amarillo, tam = 26) {
+  flotantes.push({ t, x: clamp(x, 60, W - 60), y, color, tam: tam * U, vida: 0, max: 1.1 });
+}
+
+function actualizarEfectos(dt) {
+  for (const p of particulas) {
+    p.vida += dt;
+    if (p.vx !== undefined) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.tipo === 'confeti') { p.vy += 380 * dt; p.vx *= 0.985; } else { p.vy += 160 * dt; p.vx *= 0.97; }
+      p.rot += p.vr * dt;
+    }
+  }
+  particulas = particulas.filter(p => p.vida < p.max && p.y < H + 40);
+  for (const f of flotantes) { f.vida += dt; f.y -= 60 * U * dt; }
+  flotantes = flotantes.filter(f => f.vida < f.max);
+}
+
+function dibujarParticulas() {
+  for (const p of particulas) {
+    const k = p.vida / p.max, alfa = 1 - k;
+    if (p.tipo === 'anillo') {
+      ctx.globalAlpha = alfa;
+      ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.tam * (0.3 + k * 1.2), 0, Math.PI * 2); ctx.stroke();
+    } else if (p.tipo === 'destello') {
+      const r = p.tam * (0.6 + k);
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, `rgba(255,255,230,${0.95 * alfa})`); g.addColorStop(0.4, `rgba(255,230,120,${0.6 * alfa})`); g.addColorStop(1, 'rgba(255,220,100,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    } else if (p.tipo === 'estrella') {
+      ctx.globalAlpha = alfa; ctx.fillStyle = p.color;
+      caminoEstrella(ctx, p.x, p.y, p.tam, 5, 0.45, p.rot); ctx.fill();
+    } else {
+      ctx.globalAlpha = Math.min(1, alfa * 1.6); ctx.fillStyle = p.color;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillRect(-p.tam / 2, -p.tam / 4, p.tam, p.tam / 2); ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function dibujarFlotantes() {
+  for (const f of flotantes) {
+    const k = f.vida / f.max;
+    ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+    const esc = k < 0.15 ? rebote(k / 0.15) : 1;
+    texto(f.t, f.x, f.y, f.tam * esc, f.color);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------------------------------------------------------------------
+   10) LÓGICA DE LA PARTIDA
+   --------------------------------------------------------------------- */
+function actualizarJuego(dt) {
+  if (J.pausado) return;
+  if (J.fase !== 'final') J.transcurrido += dt;      // el reloj se congela en el mensaje final
+  J.modoLuz = Math.max(0, J.modoLuz - dt);
+  J.proteccion = Math.max(0, J.proteccion - dt);
+  J.sacudida = Math.max(0, J.sacudida - dt * 2.5);
+
+  if (J.fase === 'normal') {
+    const d = dificultad();
+    J.proximaAparicion -= dt;
+    J.proximaDorada -= dt;
+    const vivos = J.objetos.filter(o => o.estado === 'vivo').length;
+    const maximo = Math.round(lerp(CONFIG.MAX_OBJETOS_INICIAL, CONFIG.MAX_OBJETOS_FINAL, d));
+    if (J.proximaAparicion <= 0 && vivos < maximo) {
+      if (J.proximaDorada <= 0) {
+        crearObjeto('dorada');
+        J.proximaDorada = rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX);
+      } else {
+        const probTesoro = J.transcurrido < 3 ? 0 : lerp(CONFIG.PROB_TESORO_INICIAL, CONFIG.PROB_TESORO_FINAL, d);
+        crearObjeto(Math.random() < probTesoro ? 'tesoro' : 'calabaza');
+      }
+      J.proximaAparicion = lerp(CONFIG.INTERVALO_INICIAL, CONFIG.INTERVALO_FINAL, d) * rand(0.75, 1.25);
+    }
+    if (tiempoRestante() <= CONFIG.DURACION_JEFE) iniciarJefe();
+  } else if (J.fase === 'jefe') {
+    actualizarJefe(dt);
+    if (tiempoRestante() <= 0 && !J.jefe.roto) romperJefe(false);
+  } else if (J.fase === 'final') {
+    J.final.t += dt;
+    if (J.jefe) actualizarJefe(dt);
+    // Lluvia de luz suave mientras se lee el mensaje
+    if (Math.random() < dt * 3) explosionLuz(rand(W * 0.1, W * 0.9), rand(H * 0.15, H * 0.5), 0.7, Math.random() < 0.5);
+  }
+  actualizarObjetos(dt);
+  if (J.banner) { J.banner.t += dt; if (J.banner.t > J.banner.dur) J.banner = null; }
+}
+
+function puntosConMultiplicador(base) {
+  return base * (J.modoLuz > 0 ? CONFIG.MULTIPLICADOR_MODO_LUZ : 1);
+}
+
+function romperCalabaza(o) {
+  const dorada = o.tipo === 'dorada';
+  const pts = puntosConMultiplicador(CONFIG.PUNTOS_CALABAZA * (dorada ? CONFIG.MULTIPLICADOR_DORADA : 1));
+  J.puntos += pts;
+  o.estado = 'roto';
+  J.objetos.splice(J.objetos.indexOf(o), 1);
+  explosionLuz(o.x, o.y, dorada ? 1.4 : 1, dorada);
+  textoFlotante('+' + pts, o.x, o.y - o.r, dorada ? '#fff6b0' : COLOR.amarillo, dorada ? 34 : 28);
+  if (dorada) {
+    Sonido.estrella();
+    const frase = TEXTOS.FRASES_DORADA[J.fraseIdx % TEXTOS.FRASES_DORADA.length];
+    J.fraseIdx++;
+    mostrarBanner('✨ ' + frase + ' ✨', '', '#fff6b0', 2.6);
+  } else {
+    Sonido.pop();
+  }
+  // Combo → MODO LUZ
+  J.combo++;
+  if (J.combo >= CONFIG.COMBO_PARA_MODO_LUZ) {
+    J.combo = 0;
+    const yaEstaba = J.modoLuz > 0;
+    J.modoLuz = CONFIG.DURACION_MODO_LUZ;
+    J.flash = Math.max(J.flash, 0.5);
+    Sonido.modoLuz();
+    if (!yaEstaba || !dorada) mostrarBanner(TEXTOS.MODO_LUZ, TEXTOS.MODO_LUZ_SUB, COLOR.amarillo, 1.8);
+  }
+}
+
+function tocarTesoro(o) {
+  o.estado = 'tocado'; o.tEstado = 0;
+  J.combo = 0;
+  textoFlotante(TEXTOS.TESORO_TOCADO, o.x, o.y - o.r * 1.2, '#ffffff', 20);
+  if (J.proteccion > 0) return;                      // recién perdió una: no castigamos dos veces
+  J.vidas = Math.max(0, J.vidas - 1);
+  J.proteccion = CONFIG.PROTECCION_TRAS_ERROR;
+  J.sacudida = 1;
+  Sonido.error();
+  if (J.vidas <= 0 && CONFIG.TERMINAR_SIN_VIDAS) terminarPartida('vidas');
+}
+
+/* ---------------------------------------------------------------------
+   11) JEFE FINAL: la calabaza gigante
+   --------------------------------------------------------------------- */
+function iniciarJefe() {
+  J.fase = 'jefe';
+  for (const o of J.objetos) if (o.estado === 'vivo') { o.estado = 'saliendo'; o.tEstado = 0; }
+  const r = Math.min(W * 0.36, (H - hudAbajo()) * 0.3);
+  const yObj = clamp(Math.max(H * 0.56, hudAbajo() + 70 * U + r), r, H - r * 0.85);
+  J.jefe = { x: W / 2, y: H + r * 1.2, yObjetivo: yObj, r, energia: CONFIG.TOQUES_JEFE, golpe: 0, t: 0, roto: false, tRoto: 0 };
+  mostrarBanner(TEXTOS.JEFE_LLEGA, TEXTOS.JEFE_LLEGA_SUB, COLOR.naranja, 2.4);
+  Sonido.tono(220, 0.4, 'triangle', 0.2, 440);
+}
+
+function actualizarJefe(dt) {
+  const j = J.jefe; j.t += dt;
+  j.golpe = Math.max(0, j.golpe - dt * 5);
+  if (j.roto) { j.tRoto += dt; return; }
+  j.y = lerp(j.y, j.yObjetivo, Math.min(1, dt * 3));
+  j.x = W / 2 + Math.sin(j.t * 1.3) * Math.min(W * 0.1, 50 * U);
+}
+
+function golpearJefe(x, y) {
+  const j = J.jefe;
+  j.energia--; j.golpe = 1;
+  J.puntos += puntosConMultiplicador(CONFIG.PUNTOS_TOQUE_JEFE);
+  const progreso = 1 - j.energia / CONFIG.TOQUES_JEFE;
+  Sonido.golpe(progreso);
+  explosionLuz(x, y, 0.55, Math.random() < 0.3);
+  if (j.energia <= 0) romperJefe(true);
+}
+
+function romperJefe(porElNene) {
+  const j = J.jefe; j.roto = true; j.tRoto = 0;
+  if (porElNene) {
+    J.puntos += puntosConMultiplicador(CONFIG.PUNTOS_JEFE) + Math.ceil(tiempoRestante()) * CONFIG.BONUS_POR_SEGUNDO;
+  }
+  for (let i = 0; i < 6; i++) explosionLuz(j.x + rand(-j.r, j.r) * 0.6, j.y + rand(-j.r, j.r) * 0.6, 1.6, true);
+  explosionLuz(j.x, j.y, 2.5, true);
+  terminarPartida(porElNene ? 'jefe' : 'tiempo');
+}
+
+function terminarPartida(motivo) {
+  J.fase = 'final';
+  J.final = { t: 0, motivo };
+  J.flash = 1; J.modoLuz = 0;
+  for (const o of J.objetos) if (o.estado === 'vivo') { o.estado = 'saliendo'; o.tEstado = 0; }
+  Sonido.victoria();
+  lluviaConfeti(80);
+}
+
+function dibujarJefe() {
+  const j = J.jefe; if (!j) return;
+  if (j.roto) {
+    // Queda una gran luz donde estaba la calabaza
+    const k = clamp(j.tRoto / 1.2, 0, 1);
+    const r = j.r * (1 + k * 2.5);
+    const g = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, r);
+    g.addColorStop(0, `rgba(255,255,230,${0.9 * (1 - k * 0.6)})`); g.addColorStop(1, 'rgba(255,230,120,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(j.x, j.y, r, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  const progreso = 1 - j.energia / CONFIG.TOQUES_JEFE;
+  // Rayos de luz que se escapan por las grietas
+  ctx.save(); ctx.translate(j.x, j.y);
+  const nRayos = Math.floor(progreso * 10);
+  for (let i = 0; i < nRayos; i++) {
+    const a = i * 2.39996 + j.t * 0.4;
+    const largo = j.r * (1.2 + progreso * 0.9 + Math.sin(j.t * 5 + i) * 0.1);
+    ctx.fillStyle = 'rgba(255,240,170,0.35)';
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a - 0.07) * largo, Math.sin(a - 0.07) * largo);
+    ctx.lineTo(Math.cos(a + 0.07) * largo, Math.sin(a + 0.07) * largo);
+    ctx.closePath(); ctx.fill();
+  }
+  const temblor = progreso > 0.6 ? Math.sin(j.t * 40) * progreso * 3 : 0;
+  ctx.translate(temblor, 0);
+  ctx.scale(1 + j.golpe * 0.1, 1 - j.golpe * 0.1);
+  const tam = j.r * 2.35;
+  ctx.drawImage(SPRITE_JEFE, -tam / 2, -tam * 0.56, tam, tam);
+  // Grietas de luz sobre la calabaza
+  ctx.strokeStyle = '#fff8c8'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, j.r * 0.03);
+  const nGrietas = Math.floor(progreso * 6);
+  for (let i = 0; i < nGrietas; i++) {
+    const a = i * 1.7 + 0.5;
+    ctx.beginPath();
+    let px = Math.cos(a) * j.r * 0.25, py = Math.sin(a) * j.r * 0.25;
+    ctx.moveTo(px, py);
+    for (let k = 1; k <= 3; k++) {
+      px = Math.cos(a + (k % 2 ? 0.25 : -0.25)) * j.r * (0.25 + k * 0.2);
+      py = Math.sin(a + (k % 2 ? 0.25 : -0.25)) * j.r * (0.25 + k * 0.2);
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Barra de energía
+  const bw = Math.min(W * 0.8, j.r * 2), bh = 18 * U;
+  const bx = W / 2 - bw / 2, by = j.y - j.r * 1.05 - bh - 16 * U;
+  texto(TEXTOS.JEFE_NOMBRE, W / 2, by - 14 * U, 17 * U, COLOR.amarillo);
+  ctx.fillStyle = 'rgba(26,20,70,0.75)'; rr(ctx, bx - 4, by - 4, bw + 8, bh + 8, (bh + 8) / 2); ctx.fill();
+  const frac = j.energia / CONFIG.TOQUES_JEFE;
+  if (frac > 0) {
+    const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    g.addColorStop(0, COLOR.naranjaOsc); g.addColorStop(1, COLOR.naranja);
+    ctx.fillStyle = g; rr(ctx, bx, by, Math.max(bh, bw * frac), bh, bh / 2); ctx.fill();
+  }
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; rr(ctx, bx - 4, by - 4, bw + 8, bh + 8, (bh + 8) / 2); ctx.stroke();
+}
+
+/* ---------------------------------------------------------------------
+   12) PANTALLA DE JUEGO: dibujo, HUD y mensaje final
+   --------------------------------------------------------------------- */
+function dibujarModoLuz() {
+  if (J.modoLuz <= 0) return;
+  const fuerza = Math.min(1, J.modoLuz / 0.8) * (0.85 + Math.sin(J.reloj * 5) * 0.15);
+  ctx.fillStyle = `rgba(255,225,120,${0.2 * fuerza})`; ctx.fillRect(0, 0, W, H);
+  // Rayos girando desde el centro
+  ctx.save(); ctx.translate(W / 2, H * 0.45); ctx.rotate(J.reloj * 0.25);
+  const largo = Math.hypot(W, H);
+  ctx.fillStyle = `rgba(255,250,200,${0.12 * fuerza})`;
+  for (let i = 0; i < 12; i++) {
+    ctx.rotate(Math.PI / 6);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(largo, -largo * 0.12); ctx.lineTo(largo, largo * 0.12); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function dibujarJuego() {
+  ctx.save();
+  if (J.sacudida > 0) ctx.translate(Math.sin(J.reloj * 50) * J.sacudida * 4, 0);
+  dibujarModoLuz();
+  dibujarObjetos();
+  dibujarJefe();
+  dibujarParticulas();
+  dibujarFlotantes();
+  ctx.restore();
+  if (J.proteccion > 0) {               // borde suave al perder una vida
+    ctx.strokeStyle = `rgba(184,161,255,${J.proteccion * 0.6})`; ctx.lineWidth = 14; ctx.strokeRect(0, 0, W, H);
+  }
+  dibujarHUD();
+  dibujarBanner();
+  if (J.fase === 'final') dibujarMensajeFinal();
+  if (J.pausado) dibujarPausa();
+}
+
+function pastilla(x, y, w, h) {
+  ctx.fillStyle = 'rgba(20,16,60,0.55)'; rr(ctx, x, y, w, h, h / 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function dibujarHUD() {
+  const u = Math.min(U, 1.2);
+  const y1 = SEG_ARRIBA + 10, h1 = 44 * u, m = 12;
+  const tam = 22 * u;
+  // Puntos
+  const wP = 120 * u;
+  pastilla(m, y1, wP, h1);
+  texto(TEXTOS.PUNTOS.toUpperCase(), m + wP / 2, y1 + h1 * 0.28, 10 * u, '#cfc6ff', { borde: false });
+  texto(String(J.puntos), m + wP / 2, y1 + h1 * 0.66, tam, COLOR.amarillo, { borde: false });
+  // Tiempo
+  const resta = Math.ceil(tiempoRestante());
+  const urgente = resta <= CONFIG.DURACION_JEFE && J.fase !== 'final';
+  const wT = 92 * u, xT = W / 2 - wT / 2;
+  const latido = urgente ? 1 + Math.max(0, Math.sin(J.reloj * 8)) * 0.08 : 1;
+  pastilla(xT, y1, wT, h1);
+  texto('⏱ ' + resta, W / 2, y1 + h1 / 2 + 1, tam * latido, urgente ? COLOR.naranja : '#ffffff', { borde: false });
+  // Botones redondos: pausa y sonido (el de sonido se dibuja aparte, siempre)
+  if (J.fase !== 'final' && !J.pausado) {
+    botonRedondo('pausa', W - m - 22 * u - 52 * u, y1 + h1 / 2, 22 * u, '⏸', () => { J.pausado = true; });
+  }
+  // Vidas (estrellitas)
+  const y2 = y1 + h1 + 8 * u, h2 = 40 * u;
+  const wV = 120 * u;
+  pastilla(m, y2, wV, h2);
+  for (let i = 0; i < CONFIG.VIDAS; i++) {
+    const cx = m + 22 * u + i * 38 * u, cy = y2 + h2 / 2;
+    caminoEstrella(ctx, cx, cy, 14 * u, 5, 0.48);
+    if (i < J.vidas) { ctx.fillStyle = COLOR.amarillo; ctx.fill(); ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    else { ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  }
+  // Barra de combo / MODO LUZ
+  const xC = m + wV + 8 * u, wC = W - xC - m;
+  pastilla(xC, y2, wC, h2);
+  const bx = xC + 12 * u, bw = wC - 24 * u, bh = 12 * u, by = y2 + h2 * 0.62 - bh / 2;
+  let frac, etiqueta, colorA, colorB;
+  if (J.modoLuz > 0) {
+    frac = J.modoLuz / CONFIG.DURACION_MODO_LUZ;
+    etiqueta = `${TEXTOS.MODO_LUZ} x${CONFIG.MULTIPLICADOR_MODO_LUZ}`; colorA = '#fff6b0'; colorB = COLOR.amarillo;
+  } else {
+    frac = J.combo / CONFIG.COMBO_PARA_MODO_LUZ;
+    etiqueta = `Combo ${J.combo}/${CONFIG.COMBO_PARA_MODO_LUZ}`; colorA = COLOR.violeta; colorB = COLOR.naranja;
+  }
+  texto(etiqueta, xC + wC / 2, y2 + h2 * 0.27, 11 * u, J.modoLuz > 0 ? COLOR.amarillo : '#cfc6ff', { borde: false });
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'; rr(ctx, bx, by, bw, bh, bh / 2); ctx.fill();
+  if (frac > 0) {
+    const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, colorA); g.addColorStop(1, colorB);
+    ctx.fillStyle = g; rr(ctx, bx, by, Math.max(bh, bw * frac), bh, bh / 2); ctx.fill();
+  }
+}
+
+function dibujarBanner() {
+  const b = J.banner; if (!b) return;
+  const k = b.t / b.dur;
+  const entrada = rebote(b.t / 0.35);
+  const alfa = k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1;
+  const cy = Math.max(hudAbajo() + 50 * U, H * 0.3);
+  const anchoMax = Math.min(W - 40, 560 * U);
+  ctx.save(); ctx.globalAlpha = clamp(alfa, 0, 1);
+  ctx.translate(W / 2, cy); ctx.scale(entrada, entrada);
+  const tam = b.sub ? 34 * U : 26 * U;
+  const lineas = renglones(b.titulo, tam, anchoMax - 30);
+  const alto = lineas.length * tam * 1.22 + (b.sub ? 30 * U : 0) + 24 * U;
+  ctx.fillStyle = 'rgba(26,20,70,0.6)'; rr(ctx, -anchoMax / 2, -alto / 2, anchoMax, alto, 22 * U); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,240,170,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  const yT = b.sub ? -15 * U : 0;
+  textoEnRenglones(b.titulo, 0, yT, tam, anchoMax - 30, b.color);
+  if (b.sub) texto(b.sub, 0, alto / 2 - 24 * U, 20 * U, '#ffffff');
+  ctx.restore();
+}
+
+function dibujarMensajeFinal() {
+  const f = J.final, t = f.t;
+  const ap = clamp(t / 0.6, 0, 1);
+  // Fondo de luz cálida
+  ctx.fillStyle = `rgba(255,236,170,${0.35 * ap})`; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W / 2, H * 0.45); ctx.rotate(t * 0.2);
+  const largo = Math.hypot(W, H);
+  ctx.fillStyle = `rgba(255,255,255,${0.16 * ap})`;
+  for (let i = 0; i < 14; i++) {
+    ctx.rotate(Math.PI / 7);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(largo, -largo * 0.1); ctx.lineTo(largo, largo * 0.1); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  const anchoMax = Math.min(W - 40, 560 * U);
+  const esc = rebote(clamp((t - 0.3) / 0.6, 0, 1));
+  ctx.save(); ctx.translate(W / 2, H * 0.42); ctx.scale(esc, esc);
+  // Tarjeta
+  const tamMsg = Math.min(40 * U, W * 0.085);
+  const lineas = renglones(TEXTOS.MENSAJE_FINAL, tamMsg, anchoMax - 40);
+  const altoMsg = lineas.length * tamMsg * 1.22;
+  const alto = altoMsg + 190 * U;
+  ctx.fillStyle = 'rgba(27,37,96,0.88)'; rr(ctx, -anchoMax / 2, -alto / 2, anchoMax, alto, 28 * U); ctx.fill();
+  ctx.strokeStyle = COLOR.amarillo; ctx.lineWidth = 4; ctx.stroke();
+  // Cruz con halo
+  const cyCruz = -alto / 2 + 52 * U;
+  const g = ctx.createRadialGradient(0, cyCruz, 4, 0, cyCruz, 60 * U);
+  g.addColorStop(0, 'rgba(255,245,180,0.9)'); g.addColorStop(1, 'rgba(255,245,180,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, cyCruz, 60 * U, 0, Math.PI * 2); ctx.fill();
+  dibujarEmoji('✝️', 0, cyCruz, 64 * U);
+  textoEnRenglones(TEXTOS.MENSAJE_FINAL, 0, cyCruz + 50 * U + altoMsg / 2, tamMsg, anchoMax - 40, COLOR.amarillo);
+  const sub = f.motivo === 'jefe' ? TEXTOS.FINAL_JEFE : f.motivo === 'tiempo' ? TEXTOS.FINAL_TIEMPO : TEXTOS.FINAL_VIDAS;
+  textoEnRenglones(sub, 0, alto / 2 - 40 * U, 19 * U, anchoMax - 50, '#ffffff', { borde: false, peso: '700' });
+  ctx.restore();
+
+  if (t > 2.2) {
+    const bw = Math.min(W * 0.7, 280 * U), bh = 66 * U;
+    boton('seguirFinal', W / 2 - bw / 2, Math.min(H - SEG_ABAJO - bh - 20, H * 0.42 + alto / 2 + 26 * U), bw, bh, TEXTOS.SEGUIR,
+      COLOR.naranja, COLOR.naranjaOsc, irAPregunta, { latido: true });
+  }
+}
+
+function dibujarPausa() {
+  ctx.fillStyle = 'rgba(15,12,45,0.7)'; ctx.fillRect(0, 0, W, H);
+  texto(TEXTOS.PAUSA, W / 2, H * 0.4, 52 * U, COLOR.amarillo);
+  const bw = Math.min(W * 0.75, 300 * U), bh = 72 * U;
+  boton('seguirPausa', W / 2 - bw / 2, H * 0.4 + 50 * U, bw, bh, TEXTOS.PAUSA_SEGUIR, COLOR.naranja, COLOR.naranjaOsc, () => { J.pausado = false; });
+}
+
+/* ---------------------------------------------------------------------
+   13) BOTONES dibujados en el canvas
+   --------------------------------------------------------------------- */
+function boton(id, x, y, w, h, etiqueta, colorA, colorB, alTocar, opciones = {}) {
+  botones.push({ id, x, y, w, h, alTocar });
+  let esc = 1;
+  if (presionado && presionado.id === id) esc = 1 - 0.07 * Math.max(0, 1 - (J.reloj - presionado.t) / 0.15);
+  if (opciones.latido) esc *= 1 + Math.sin(J.reloj * 4) * 0.035;
+  ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.scale(esc, esc);
+  if (opciones.apagado) ctx.globalAlpha = 0.45;
+  const r = Math.min(h / 2, 26 * U);
+  ctx.fillStyle = 'rgba(15,10,50,0.45)'; rr(ctx, -w / 2, -h / 2 + 6, w, h, r); ctx.fill();
+  const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+  g.addColorStop(0, colorA); g.addColorStop(1, colorB);
+  ctx.fillStyle = g; rr(ctx, -w / 2, -h / 2, w, h, r); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'; rr(ctx, -w / 2 + 8, -h / 2 + 5, w - 16, h * 0.35, r * 0.7); ctx.fill();
+  if (opciones.dibujo) opciones.dibujo(w, h);
+  else {
+    const tam = tamQueEntra(etiqueta, opciones.tam || h * 0.42, w - 24);
+    texto(etiqueta, 0, 2, tam, '#ffffff', { colorBorde: 'rgba(120,40,0,0.55)' });
+  }
+  ctx.restore();
+}
+
+function botonRedondo(id, cx, cy, r, emoji, alTocar) {
+  botones.push({ id, x: cx - r, y: cy - r, w: r * 2, h: r * 2, alTocar, margen: 8 });
+  ctx.fillStyle = 'rgba(20,16,60,0.55)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+  dibujarEmoji(emoji, cx, cy, r * 1.15);
+}
+
+function dibujarBotonSonido() {
+  const u = Math.min(U, 1.2);
+  const r = 22 * u, cx = W - 12 - r, cy = SEG_ARRIBA + 10 + 22 * u;
+  botonRedondo('sonido', cx, cy, r, Sonido.silencio ? '🔇' : '🔊', () => { Sonido.alternar(); });
+}
+
+/* ---------------------------------------------------------------------
+   14) PANTALLA DE INICIO
+   --------------------------------------------------------------------- */
+function dibujarHeroe(x, y, s, t) {
+  // (x, y) = pies del héroe; s = altura total
+  const nena = J.heroe === 'nena';
+  const piel = '#f6c9a0', pelo = nena ? '#6b3b1f' : '#3b2414';
+  const remera = nena ? '#ff7aa8' : '#4fa3ff';
+  const angulo = -0.55 + Math.sin(t * 1.4) * 0.12;      // la linterna se mueve suave
+  const hombroX = x + s * 0.1, hombroY = y - s * 0.6;
+  const manoX = hombroX + Math.cos(angulo) * s * 0.26, manoY = hombroY + Math.sin(angulo) * s * 0.26;
+
+  // Haz de luz
+  const largo = s * 1.25;
+  const g = ctx.createLinearGradient(manoX, manoY, manoX + Math.cos(angulo) * largo, manoY + Math.sin(angulo) * largo);
+  g.addColorStop(0, 'rgba(255,245,170,0.85)'); g.addColorStop(1, 'rgba(255,245,170,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(manoX, manoY);
+  ctx.lineTo(manoX + Math.cos(angulo - 0.28) * largo, manoY + Math.sin(angulo - 0.28) * largo);
+  ctx.lineTo(manoX + Math.cos(angulo + 0.28) * largo, manoY + Math.sin(angulo + 0.28) * largo);
+  ctx.closePath(); ctx.fill();
+  // Destellos al final del haz
+  for (let i = 0; i < 4; i++) {
+    const a = angulo + (i - 1.5) * 0.12, d = largo * (0.65 + (i % 2) * 0.15);
+    const px = manoX + Math.cos(a) * d, py = manoY + Math.sin(a) * d;
+    ctx.fillStyle = `rgba(255,255,255,${0.6 + Math.sin(t * 6 + i) * 0.4})`;
+    caminoEstrella(ctx, px, py, s * 0.035, 4, 0.35); ctx.fill();
+  }
+
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // Piernas y zapatillas
+  ctx.strokeStyle = '#2f3f8f'; ctx.lineWidth = s * 0.075;
+  ctx.beginPath(); ctx.moveTo(x - s * 0.06, y - s * 0.36); ctx.lineTo(x - s * 0.07, y - s * 0.05); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + s * 0.06, y - s * 0.36); ctx.lineTo(x + s * 0.07, y - s * 0.05); ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  rr(ctx, x - s * 0.15, y - s * 0.06, s * 0.12, s * 0.06, s * 0.03); ctx.fill();
+  rr(ctx, x + s * 0.03, y - s * 0.06, s * 0.12, s * 0.06, s * 0.03); ctx.fill();
+  // Cuerpo (remera o vestido)
+  ctx.fillStyle = remera;
+  ctx.beginPath();
+  if (nena) { ctx.moveTo(x - s * 0.1, y - s * 0.66); ctx.lineTo(x + s * 0.1, y - s * 0.66); ctx.lineTo(x + s * 0.17, y - s * 0.33); ctx.lineTo(x - s * 0.17, y - s * 0.33); }
+  else { rr(ctx, x - s * 0.12, y - s * 0.66, s * 0.24, s * 0.32, s * 0.06); }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = COLOR.amarillo; caminoEstrella(ctx, x, y - s * 0.5, s * 0.05, 5, 0.5); ctx.fill();
+  // Brazo libre (saludando) y brazo con linterna
+  ctx.strokeStyle = piel; ctx.lineWidth = s * 0.06;
+  ctx.beginPath(); ctx.moveTo(x - s * 0.1, y - s * 0.6); ctx.lineTo(x - s * 0.22, y - s * 0.72 + Math.sin(t * 3) * s * 0.02); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hombroX, hombroY); ctx.lineTo(manoX, manoY); ctx.stroke();
+  // Linterna
+  ctx.save(); ctx.translate(manoX, manoY); ctx.rotate(angulo);
+  ctx.fillStyle = '#7b86a8'; rr(ctx, -s * 0.03, -s * 0.03, s * 0.12, s * 0.06, s * 0.015); ctx.fill();
+  ctx.fillStyle = '#c3cbe0'; rr(ctx, s * 0.08, -s * 0.045, s * 0.05, s * 0.09, s * 0.015); ctx.fill();
+  ctx.fillStyle = '#fff6b0'; ctx.fillRect(s * 0.125, -s * 0.035, s * 0.012, s * 0.07);
+  ctx.restore();
+  // Cabeza
+  const hx = x, hy = y - s * 0.8, hr = s * 0.15;
+  if (nena) {   // colita
+    ctx.fillStyle = pelo; ctx.beginPath(); ctx.ellipse(hx - hr * 1.05, hy + hr * 0.1, hr * 0.35, hr * 0.6, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COLOR.amarillo; ctx.beginPath(); ctx.arc(hx - hr * 0.85, hy - hr * 0.35, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = piel; ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = pelo; ctx.beginPath(); ctx.arc(hx, hy - hr * 0.1, hr * 1.02, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + hr * 0.3, hy - hr * 0.55, hr * 0.5, hr * 0.28, 0.3, 0, Math.PI * 2); ctx.fill();
+  // Carita
+  ctx.fillStyle = '#3a2a20';
+  ctx.beginPath(); ctx.arc(hx - hr * 0.35, hy + hr * 0.1, hr * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + hr * 0.35, hy + hr * 0.1, hr * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,110,140,0.5)';
+  ctx.beginPath(); ctx.arc(hx - hr * 0.6, hy + hr * 0.38, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + hr * 0.6, hy + hr * 0.38, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#3a2a20'; ctx.lineWidth = hr * 0.11;
+  ctx.beginPath(); ctx.arc(hx, hy + hr * 0.3, hr * 0.32, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+}
+
+function dibujarInicio() {
+  const t = J.tPantalla;
+  const arriba = SEG_ARRIBA + 10, abajo = H - SEG_ABAJO - 10;
+  const ancho = Math.min(W - 32, 520 * U);
+  // Bloques de arriba hacia abajo (alto en unidades U)
+  const tamLogo = 96 * U, tamTit = Math.min(54 * U, W * 0.14), tamSub = 23 * U, altoHeroe = 190 * U;
+  const tamLema = 19 * U, altoBoton = 80 * U, tamInst = 15 * U;
+  const lineasLema = renglones(TEXTOS.LEMA, tamLema, ancho - 20, '800');
+  const bloques = [tamLogo, tamTit * 1.05, tamSub * 1.3, altoHeroe, lineasLema.length * tamLema * 1.25, altoBoton, tamInst * 3.9];
+  const suma = bloques.reduce((a, b) => a + b, 0);
+  const hueco = Math.max(4, (abajo - arriba - suma) / (bloques.length + 1));
+  let y = arriba + hueco;
+  const centro = (i) => { const c = y + bloques[i] / 2; y += bloques[i] + hueco; return c; };
+
+  // Logo
+  const yLogo = centro(0);
+  dibujarLogo(W / 2, yLogo + Math.sin(t * 2) * 3, tamLogo);
+  // Título
+  const yTit = centro(1);
+  const entrada = rebote(t / 0.7);
+  ctx.save(); ctx.translate(W / 2, yTit); ctx.scale(entrada, entrada);
+  texto(TEXTOS.TITULO, 0, 0, tamQueEntra(TEXTOS.TITULO, tamTit, ancho), COLOR.amarillo, { colorBorde: '#6c2a00' });
+  ctx.restore();
+  const ySub = centro(2);
+  texto(TEXTOS.SUBTITULO, W / 2, ySub, tamQueEntra(TEXTOS.SUBTITULO, tamSub, ancho), COLOR.naranja);
+  // Héroe apuntando con la linterna a una calabaza que se rompe de luz
+  const yHeroe = centro(3);
+  const s = altoHeroe * 0.92;
+  const pies = yHeroe + altoHeroe / 2;
+  const hx = W / 2 - Math.min(ancho * 0.22, s * 0.5);
+  dibujarHeroe(hx, pies, s, J.reloj);
+  const cx = clamp(hx + s * 0.95, 40, W - 40), cy = pies - s * 0.95 + Math.sin(J.reloj * 2) * 6;
+  const tamC = s * 0.42;
+  ctx.drawImage(SPRITE_CALABAZA, cx - tamC / 2, cy - tamC * 0.56, tamC, tamC);
+  if (Math.random() < 0.04) explosionLuz(cx + rand(-10, 10), cy + rand(-10, 10), 0.35, Math.random() < 0.4);
+  // Lema
+  const yLema = centro(4);
+  const altoL = tamLema * 1.25;
+  lineasLema.forEach((l, i) => texto(l, W / 2, yLema - ((lineasLema.length - 1) * altoL) / 2 + i * altoL, tamLema, '#ffffff', { peso: '800' }));
+  // Botón JUGAR
+  const yBoton = centro(5);
+  const bw = Math.min(ancho * 0.85, 320 * U);
+  boton('jugar', W / 2 - bw / 2, yBoton - altoBoton / 2, bw, altoBoton, TEXTOS.JUGAR, '#ffb347', COLOR.naranjaOsc,
+    () => { Sonido.boton(); iniciarJuego(); }, { latido: true, tam: altoBoton * 0.5 });
+  // Instrucciones y récord
+  const yInst = centro(6) - tamInst * 1.3;
+  texto(TEXTOS.INSTRUCCION_1, W / 2, yInst, tamQueEntra(TEXTOS.INSTRUCCION_1, tamInst, ancho, '700'), '#ffffff', { peso: '700', borde: false });
+  texto(TEXTOS.INSTRUCCION_2, W / 2, yInst + tamInst * 1.35, tamQueEntra(TEXTOS.INSTRUCCION_2, tamInst, ancho, '700'), '#ffffff', { peso: '700', borde: false });
+  if (J.mejor > 0) texto(`🏆 ${TEXTOS.MEJOR}: ${J.mejor}`, W / 2, yInst + tamInst * 2.7, tamInst, COLOR.amarillo, { peso: '800', borde: false });
+  dibujarParticulas();
+}
+
+/* ---------------------------------------------------------------------
+   15) PREGUNTA FINAL: ¿A quién celebramos?
+   --------------------------------------------------------------------- */
+function irAPregunta() {
+  Sonido.boton();
+  particulas = []; flotantes = [];
+  J.pregunta = { estado: 'esperando', t: 0, aLaPrimera: true };
+  cambiarPantalla('pregunta');
+}
+
+function responder(correcta) {
+  const p = J.pregunta;
+  if (p.estado === 'bien') return;
+  if (correcta) {
+    p.estado = 'bien'; p.t = 0;
+    if (p.aLaPrimera) J.puntos += CONFIG.BONUS_PREGUNTA;
+    Sonido.victoria();
+    lluviaConfeti(90);
+    explosionLuz(W / 2, H * 0.5, 2, true);
+  } else {
+    p.estado = 'casi'; p.t = 0; p.aLaPrimera = false;
+    Sonido.error();
+  }
+}
+
+function dibujarPregunta() {
+  const p = J.pregunta;
+  const ancho = Math.min(W - 32, 560 * U);
+  const tamTit = tamQueEntra(TEXTOS.PREGUNTA, 40 * U, ancho);
+  const sep = 18 * U;
+  const bw = Math.min((ancho - sep) / 2, 220 * U), bh = Math.min(bw * 1.1, H * 0.3);
+  // Centramos todo el bloque (título + botones + mensaje) en la pantalla
+  const altoTotal = tamTit * 1.8 + 30 * U + bh + 250 * U;
+  const arriba = Math.max(SEG_ARRIBA + 70 * Math.min(U, 1.2), (H - altoTotal) / 2);
+  const yTit = arriba + tamTit;
+  texto(TEXTOS.PREGUNTA, W / 2, yTit, tamTit, COLOR.amarillo);
+
+  // Dos botones grandes lado a lado
+  const yB = yTit + tamTit * 0.8 + 30 * U;
+  const x1 = W / 2 - sep / 2 - bw, x2 = W / 2 + sep / 2;
+  const apagarCalabaza = p.estado !== 'esperando';
+  boton('respCalabaza', x1, yB, bw, bh, '', COLOR.violeta, COLOR.violetaOsc, () => responder(false), {
+    apagado: apagarCalabaza,
+    dibujo: (w, h) => dibujarEmoji('🎃', 0, 0, Math.min(w, h) * 0.6),
+  });
+  boton('respJesus', x2, yB, bw, bh, '', '#8fd3ff', '#3a6fd8', () => responder(true), {
+    latido: p.estado === 'casi',
+    dibujo: (w, h) => {
+      dibujarEmoji('✝️', 0, -h * 0.12, Math.min(w, h) * 0.48);
+      texto(TEXTOS.RESP_JESUS, 0, h * 0.3, tamQueEntra(TEXTOS.RESP_JESUS, h * 0.2, w - 20), '#ffffff', { colorBorde: 'rgba(20,40,110,0.7)' });
+    },
+  });
+  // Mensajes
+  const yM = yB + bh + 30 * U;
+  if (p.estado === 'casi') {
+    const esc = rebote(p.t / 0.4);
+    ctx.save(); ctx.translate(W / 2, yM + 40 * U); ctx.scale(esc, esc);
+    ctx.fillStyle = 'rgba(26,20,70,0.6)'; rr(ctx, -ancho / 2, -48 * U, ancho, 96 * U, 20 * U); ctx.fill();
+    textoEnRenglones(TEXTOS.CASI, 0, -10 * U, 22 * U, ancho - 30, '#ffffff');
+    texto(TEXTOS.CASI_SUB, 0, 30 * U, 17 * U, COLOR.amarillo, { borde: false, peso: '800' });
+    ctx.restore();
+  } else if (p.estado === 'bien') {
+    const esc = rebote(p.t / 0.4);
+    ctx.save(); ctx.translate(W / 2, yM + 46 * U); ctx.scale(esc, esc);
+    ctx.fillStyle = 'rgba(26,20,70,0.6)'; rr(ctx, -ancho / 2, -56 * U, ancho, 112 * U, 20 * U); ctx.fill();
+    texto(TEXTOS.BIEN, 0, -22 * U, 38 * U, COLOR.amarillo);
+    textoEnRenglones(TEXTOS.BIEN_SUB, 0, 22 * U, 19 * U, ancho - 30, '#ffffff', { peso: '800' });
+    ctx.restore();
+    if (p.t > 1.2) {
+      const bw2 = Math.min(W * 0.8, 320 * U), bh2 = 68 * U;
+      const yB2 = Math.min(H - SEG_ABAJO - bh2 - 20, yM + 120 * U);
+      boton('verResultado', W / 2 - bw2 / 2, yB2, bw2, bh2, TEXTOS.VER_RESULTADO, COLOR.naranja, COLOR.naranjaOsc, irAResultado, { latido: true });
+    }
+  }
+  dibujarParticulas();
+}
+
+/* ---------------------------------------------------------------------
+   16) RESULTADO
+   --------------------------------------------------------------------- */
+function irAResultado() {
+  Sonido.boton();
+  const estrellas = J.puntos >= CONFIG.ESTRELLAS_3 ? 3 : J.puntos >= CONFIG.ESTRELLAS_2 ? 2 : 1;
+  const nuevoRecord = J.puntos > J.mejor;
+  if (nuevoRecord) { J.mejor = J.puntos; Guardado.escribir('misionLuz.mejor', J.mejor); }
+  J.resultado = { estrellas, nuevoRecord, sonadas: 0 };
+  particulas = [];
+  cambiarPantalla('resultado');
+  lluviaConfeti(70);
+}
+
+function dibujarResultado() {
+  const r = J.resultado, t = J.tPantalla;
+  const arriba = SEG_ARRIBA + 64 * Math.min(U, 1.2), abajo = H - SEG_ABAJO - 12;
+  const ancho = Math.min(W - 32, 520 * U);
+  const tamLogo = 80 * U, tamTit = 36 * U, altoEst = 74 * U, tamPts = 30 * U, tamRec = 18 * U;
+  const tamPapas = 17 * U;
+  const lineasPapas = renglones(TEXTOS.PAPAS, tamPapas, ancho - 40, '700');
+  const altoTarjeta = 34 * U + lineasPapas.length * tamPapas * 1.3 + 34 * U;
+  const altoBoton = 70 * U;
+  const bloques = [tamLogo, tamTit * 1.2, altoEst, tamPts * 1.2 + tamRec * 1.5, altoTarjeta, altoBoton];
+  const suma = bloques.reduce((a, b) => a + b, 0);
+  const hueco = Math.max(4, (abajo - arriba - suma) / (bloques.length + 1));
+  let y = arriba - 50 * Math.min(U, 1.2) + hueco;
+  y = Math.max(y, SEG_ARRIBA + 10);
+  const centro = (i) => { const c = y + bloques[i] / 2; y += bloques[i] + hueco; return c; };
+
+  dibujarLogo(W / 2, centro(0), tamLogo);
+  texto(TEXTOS.RESULTADO, W / 2, centro(1), tamQueEntra(TEXTOS.RESULTADO, tamTit, ancho), COLOR.amarillo);
+
+  // Estrellas que se llenan una por una
+  const yE = centro(2);
+  for (let i = 0; i < 3; i++) {
+    const cx = W / 2 + (i - 1) * altoEst * 1.15;
+    const aparece = t - 0.5 - i * 0.45;
+    const llena = i < r.estrellas && aparece > 0;
+    if (llena && r.sonadas <= i) { r.sonadas = i + 1; Sonido.estrella(); explosionLuz(cx, yE, 0.6, true); }
+    const esc = llena ? rebote(aparece / 0.4) : 1;
+    const tamE = altoEst * 0.5 * (i === 1 ? 1.15 : 1) * esc;
+    caminoEstrella(ctx, cx, yE - (i === 1 ? 6 * U : 0), tamE, 5, 0.48);
+    if (llena) {
+      ctx.fillStyle = COLOR.amarillo; ctx.fill(); ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 3; ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  // Puntaje
+  const yP = centro(3);
+  texto(`${TEXTOS.PUNTOS}: ${J.puntos}`, W / 2, yP - tamRec * 0.6, tamPts, '#ffffff');
+  const lineaRec = r.nuevoRecord ? TEXTOS.NUEVO_RECORD : `🏆 ${TEXTOS.MEJOR}: ${J.mejor}`;
+  texto(lineaRec, W / 2, yP + tamPts * 0.55, tamRec, COLOR.amarillo, { peso: '800', borde: false });
+
+  // Tarjeta para los papás
+  const yT = centro(4);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; rr(ctx, W / 2 - ancho / 2, yT - altoTarjeta / 2, ancho, altoTarjeta, 20 * U); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,210,63,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  let yy = yT - altoTarjeta / 2 + 20 * U;
+  texto('👨‍👩‍👧 ' + TEXTOS.PAPAS_TITULO, W / 2, yy, 15 * U, COLOR.amarillo, { borde: false, peso: '800' });
+  yy += 14 * U + tamPapas * 0.8;
+  lineasPapas.forEach((l, i) => texto(l, W / 2, yy + i * tamPapas * 1.3, tamPapas, '#ffffff', { borde: false, peso: '700' }));
+  yy += lineasPapas.length * tamPapas * 1.3 + 4 * U;
+  texto(TEXTOS.VERSICULO, W / 2, yy, tamQueEntra(TEXTOS.VERSICULO, 13 * U, ancho - 30, '700'), '#cfc6ff', { borde: false, peso: '700' });
+
+  // Botón jugar de nuevo
+  const yB = centro(5);
+  const bw = Math.min(ancho * 0.85, 320 * U);
+  boton('deNuevo', W / 2 - bw / 2, yB - altoBoton / 2, bw, altoBoton, '🔄 ' + TEXTOS.JUGAR_DE_NUEVO, '#ffb347', COLOR.naranjaOsc,
+    () => { Sonido.boton(); iniciarJuego(); }, { latido: t > 2 });
+  dibujarParticulas();
+}
+
+/* ---------------------------------------------------------------------
+   17) TOQUES (mouse y dedos con pointer events)
+   --------------------------------------------------------------------- */
+function botonEn(x, y) {
+  for (let i = botones.length - 1; i >= 0; i--) {
+    const b = botones[i], m = b.margen || 0;
+    if (x >= b.x - m && x <= b.x + b.w + m && y >= b.y - m && y <= b.y + b.h + m) return b;
+  }
+  return null;
+}
+
+function alTocar(x, y) {
+  // 1) Botones (con una pequeña espera al cambiar de pantalla, para evitar toques sin querer)
+  const b = botonEn(x, y);
+  if (b) {
+    if (b.id === 'sonido' || b.id === 'pausa' || J.tPantalla > 0.35) {
+      presionado = { id: b.id, t: J.reloj };
+      b.alTocar();
+    }
+    return;
+  }
+  // 2) Juego
+  if (J.pantalla !== 'juego' || J.pausado || J.fase === 'final') return;
+  brilloToque(x, y);
+  if (J.fase === 'jefe') {
+    const j = J.jefe;
+    if (j && !j.roto && j.t > 0.5 && Math.hypot(x - j.x, y - j.y) <= j.r * 1.15) golpearJefe(x, y);
+    return;
+  }
+  // Primero buscamos calabazas (más generosas), después tesoros
+  let mejor = null, mejorD = Infinity;
+  for (const o of J.objetos) {
+    if (o.estado !== 'vivo' || o.tipo === 'tesoro') continue;
+    const d = Math.hypot(x - o.x, y - o.y);
+    if (d <= o.r * 1.25 && d < mejorD) { mejor = o; mejorD = d; }
+  }
+  if (mejor) { romperCalabaza(mejor); return; }
+  for (const o of J.objetos) {
+    if (o.estado !== 'vivo' || o.tipo !== 'tesoro') continue;
+    if (Math.hypot(x - o.x, y - o.y) <= o.r * 0.9) { tocarTesoro(o); return; }
+  }
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  Sonido.iniciar();
+  alTocar(e.clientX, e.clientY);
+}, { passive: false });
+
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'mouse') canvas.style.cursor = botonEn(e.clientX, e.clientY) ? 'pointer' : (J.pantalla === 'juego' ? 'crosshair' : 'default');
+});
+
+// Sin scroll, sin zoom y sin menú contextual
+['touchmove', 'gesturestart', 'gesturechange', 'dblclick', 'contextmenu'].forEach((ev) =>
+  document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+
+// Pausa automática al cambiar de pestaña o minimizar
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && J.pantalla === 'juego' && J.fase !== 'final') J.pausado = true;
+});
+
+window.addEventListener('resize', redimensionar);
+window.addEventListener('orientationchange', () => setTimeout(redimensionar, 200));
+
+// Teclado (computadora): espacio/Enter para los botones principales, P para pausa, M para sonido
+window.addEventListener('keydown', (e) => {
+  Sonido.iniciar();
+  if (e.key === 'm' || e.key === 'M') Sonido.alternar();
+  if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && J.pantalla === 'juego' && J.fase !== 'final') J.pausado = !J.pausado;
+  if (e.key === 'Enter' || e.key === ' ') {
+    const principal = botones.find(b => ['jugar', 'seguirFinal', 'seguirPausa', 'verResultado', 'deNuevo'].includes(b.id));
+    if (principal && J.tPantalla > 0.35) { principal.alTocar(); e.preventDefault(); }
+  }
+});
+
+/* ---------------------------------------------------------------------
+   18) BUCLE PRINCIPAL (60 fps)
+   --------------------------------------------------------------------- */
+function actualizar(dt) {
+  J.reloj += dt;
+  if (!J.pausado) J.tPantalla += dt;
+  J.flash = Math.max(0, J.flash - dt * 1.4);
+  if (J.pantalla === 'juego') actualizarJuego(dt);
+  if (J.pantalla === 'pregunta') J.pregunta.t += dt;
+  if (!J.pausado) actualizarEfectos(dt);
+}
+
+function dibujarCielo() {
+  ctx.drawImage(fondo, 0, 0, W, H);
+  ctx.fillStyle = '#ffffff';
+  for (const s of estrellasCielo) {
+    ctx.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(J.reloj * s.f + s.fase));
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function dibujar() {
+  botones = [];
+  dibujarCielo();
+  if (J.pantalla === 'inicio') dibujarInicio();
+  else if (J.pantalla === 'juego') dibujarJuego();
+  else if (J.pantalla === 'pregunta') dibujarPregunta();
+  else if (J.pantalla === 'resultado') dibujarResultado();
+  dibujarBotonSonido();
+  if (J.flash > 0) { ctx.fillStyle = `rgba(255,252,230,${J.flash * 0.85})`; ctx.fillRect(0, 0, W, H); }
+}
+
+let ultimo = performance.now();
+function bucle(ahora) {
+  let dt = (ahora - ultimo) / 1000; ultimo = ahora;
+  dt = clamp(dt, 0, 0.05);               // si el celular se traba, no saltamos de golpe
+  actualizar(dt);
+  dibujar();
+  requestAnimationFrame(bucle);
+}
+
+// ¡Arrancamos!
+SPRITE_CALABAZA = crearCalabaza(256, false);
+SPRITE_DORADA = crearCalabaza(256, true);
+SPRITE_JEFE = crearCalabaza(640, false);
+redimensionar();
+requestAnimationFrame(bucle);
+
+// Acceso para pruebas desde la consola (no afecta el juego)
+window.misionLuz = { estado: J, config: CONFIG };
+</script>
+</body>
+</html>
