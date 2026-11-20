@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#1b2560">
+<meta name="theme-color" content="#2a1470">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="description" content="Juego para chicos del Ministerio Internacional Libertad: rompé las calabazas del miedo con la Luz de Jesús.">
-<title>Misión Luz: ¡Rompe las Calabazas del Miedo!</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+<meta name="description" content="Juego para chicos del Ministerio Internacional Libertad: expulsá a los demonios con la autoridad de Jesús.">
+<title>¡Expulsando Demonios!</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 <style>
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background: #1b2560;
+    background: #2a1470;
     overscroll-behavior: none;
     touch-action: none;
     -webkit-user-select: none; user-select: none;
@@ -29,15 +29,15 @@
 </style>
 </head>
 <body>
-<canvas id="juego" aria-label="Juego Misión Luz"></canvas>
+<canvas id="juego" aria-label="Juego Expulsando Demonios"></canvas>
 <div id="seguro"></div>
-<noscript>Para jugar a Misión Luz necesitás activar JavaScript.</noscript>
+<noscript>Para jugar a Expulsando Demonios necesitás activar JavaScript.</noscript>
 
 <script>
 'use strict';
 
 /* =====================================================================
-   MISIÓN LUZ: ¡ROMPE LAS CALABAZAS DEL MIEDO!
+   ¡EXPULSANDO DEMONIOS!
    Juego infantil del Ministerio Internacional Libertad (M.I.L.)
    Todo en un solo archivo: HTML + CSS + JavaScript, sin librerías.
    ===================================================================== */
@@ -47,17 +47,17 @@
    --------------------------------------------------------------------- */
 const CONFIG = {
   DURACION_JUEGO: 75,          // segundos que dura la partida
-  DURACION_JEFE: 10,           // la calabaza gigante aparece en los últimos N segundos
+  DURACION_JEFE: 10,           // la demonio gigante aparece en los últimos N segundos
   VIDAS: 3,                    // estrellitas de vida
   TERMINAR_SIN_VIDAS: true,    // si se quedan sin vidas, la partida termina (con un final amable)
 
-  PUNTOS_CALABAZA: 10,
-  MULTIPLICADOR_DORADA: 3,     // la calabaza dorada vale x3
-  COMBO_PARA_MODO_LUZ: 5,      // calabazas seguidas para activar el MODO LUZ
+  PUNTOS_DEMONIO: 10,
+  MULTIPLICADOR_DORADA: 3,     // la demonio dorada vale x3
+  COMBO_PARA_MODO_LUZ: 5,      // demonios seguidas para activar el MODO LUZ
   DURACION_MODO_LUZ: 8,        // segundos
   MULTIPLICADOR_MODO_LUZ: 2,   // puntos x2 en MODO LUZ
 
-  TOQUES_JEFE: 22,             // toques necesarios para romper la calabaza gigante
+  TOQUES_JEFE: 22,             // toques necesarios para romper la demonio gigante
   PUNTOS_TOQUE_JEFE: 3,
   PUNTOS_JEFE: 200,            // premio por romperla
   BONUS_POR_SEGUNDO: 10,       // premio por cada segundo que sobre al romper al jefe
@@ -74,7 +74,7 @@ const CONFIG = {
   MAX_OBJETOS_FINAL: 12,
   PROB_TANDA_INICIAL: 0.1,     // probabilidad de que salgan 2 o 3 juntos
   PROB_TANDA_FINAL: 0.45,
-  PROB_TESORO_INICIAL: 0.14,   // probabilidad de que salga un tesoro en vez de calabaza
+  PROB_TESORO_INICIAL: 0.14,   // probabilidad de que salga un tesoro en vez de demonio
   PROB_TESORO_FINAL: 0.2,
   DORADA_CADA_MIN: 5,          // cada cuántos segundos (mínimo y máximo) sale una dorada
   DORADA_CADA_MAX: 9,
@@ -82,8 +82,8 @@ const CONFIG = {
   PROTECCION_TRAS_ERROR: 1.0,  // segundos sin poder perder otra vida
 
   // Corte deslizando el dedo (estilo "cortar frutas")
-  DURACION_ESTELA: 0.2,        // segundos que dura la estela de luz
-  BONUS_CORTE_MULTIPLE: 10,    // puntos extra por cada calabaza cortada en una misma pasada (desde 2)
+  DURACION_ESTELA: 0.28,        // segundos que dura la estela de luz
+  BONUS_CORTE_MULTIPLE: 10,    // puntos extra por cada demonio cortada en una misma pasada (desde 2)
   PAUSA_GOLPE_JEFE: 0.09,      // segundos mínimos entre dos golpes de la misma pasada al jefe
 
   ESTRELLAS_2: 450,            // puntaje para 2 estrellas
@@ -96,46 +96,49 @@ const CONFIG = {
    2) TEXTOS: todo lo que leen los chicos y los papás
    --------------------------------------------------------------------- */
 const TEXTOS = {
-  TITULO: 'MISIÓN LUZ',
-  SUBTITULO: '¡Rompe las Calabazas del Miedo!',
-  LEMA: '¡Rompé las calabazas del miedo con la Luz de Jesús!',
+  TITULO: '¡EXPULSANDO DEMONIOS!',
+  TITULO_1: 'EXPULSANDO',
+  TITULO_2: '¡DEMONIOS!',
+  SUBTITULO: '¡Con la autoridad de Jesús!',
+  LEMA: '¡En el nombre de Jesús, los demonios tienen que irse!',
   JUGAR: '¡JUGAR!',
-  INSTRUCCION_1: 'Deslizá el dedo para cortar las 🎃',
+  INSTRUCCION_1: 'Pasá el dedo sobre los demonios 😈 ¡y fuera!',
   INSTRUCCION_2: 'No toques los tesoros 📖 ❤️ 🕊️',   // (después se dibuja el logo M.I.L.)
   MEJOR: 'Mejor puntaje',
-  INICIO_PARTIDA: '¡A brillar!',
-  INICIO_PARTIDA_SUB: 'Cortá o tocá las calabazas 🎃',
+  INICIO_PARTIDA: '¡En el nombre de Jesús!',
+  INICIO_PARTIDA_SUB: 'Pasá el dedo para expulsarlos 😈',
   FRASES_DORADA: [
-    'Jesús es la luz del mundo',
-    'La luz brilla en las tinieblas',
-    'Dios no nos dio espíritu de miedo',
-    'Con Jesús no tengo miedo',
+    'En el nombre de Jesús, ¡fuera!',
+    'Mayor es el que está en nosotros',
+    'Jesús tiene toda la autoridad',
+    'Resistí al diablo y huirá de vos',
   ],
+  FRASES_FUERA: ['¡FUERA!', '¡HUYE!', '¡AFUERA!', '¡LIBRE!'],
   TESORO_TOCADO: '¡Es un tesoro! Cuidalo 💛',
   MODO_LUZ: '¡MODO LUZ!',
   MODO_LUZ_SUB: 'Puntos x2',
-  JEFE_LLEGA: '¡La calabaza gigante!',
-  JEFE_LLEGA_SUB: '¡Cortala o tocala muchas veces!',
-  CORTE_MULTIPLE: '¡Corte x',
-  JEFE_NOMBRE: 'Calabaza gigante',
-  MENSAJE_FINAL: '¡Nosotros celebramos a Jesús, no Halloween!',
-  FINAL_JEFE: '¡Rompiste la calabaza gigante!',
-  FINAL_TIEMPO: '¡La Luz de Jesús siempre gana!',
-  FINAL_VIDAS: '¡Buen intento! La Luz de Jesús siempre gana.',
+  JEFE_LLEGA: '¡El demonio gigante!',
+  JEFE_LLEGA_SUB: '¡Pasale el dedo muchas veces para echarlo!',
+  CORTE_MULTIPLE: '¡Fuera x',
+  JEFE_NOMBRE: 'Demonio gigante',
+  MENSAJE_FINAL: '¡En el nombre de Jesús, los demonios huyen!',
+  FINAL_JEFE: '¡Expulsaste al demonio gigante!',
+  FINAL_TIEMPO: '¡La autoridad de Jesús siempre gana!',
+  FINAL_VIDAS: '¡Buen intento! Con Jesús siempre ganamos.',
   SEGUIR: '¡Seguir! ➜',
-  PREGUNTA: '¿A quién celebramos?',
+  PREGUNTA: '¿Quién vence a los demonios?',
   RESP_JESUS: 'Jesús',
-  CASI: '¡Casi! Celebramos a Jesús, la Luz del mundo.',
+  CASI: '¡Casi! Solo Jesús vence a los demonios.',
   CASI_SUB: 'Tocá a Jesús 👉',
   BIEN: '¡Muy bien!',
-  BIEN_SUB: '¡Celebramos a Jesús, la Luz del mundo!',
+  BIEN_SUB: '¡Jesús tiene toda la autoridad!',
   VER_RESULTADO: 'Ver mi resultado ➜',
   RESULTADO: '¡Misión cumplida!',
   PUNTOS: 'Puntos',
   NUEVO_RECORD: '¡Nuevo récord! 🎉',
   PAPAS_TITULO: 'Para los papás',
-  PAPAS: 'Hoy aprendimos que Jesús es la luz y no tenemos miedo.',
-  VERSICULO: '«Yo soy la luz del mundo» — Juan 8:12',
+  PAPAS: 'Hoy aprendimos que en el nombre de Jesús los demonios huyen y no tenemos miedo.',
+  VERSICULO: '«En mi nombre echarán fuera demonios» — Marcos 16:17',
   JUGAR_DE_NUEVO: 'Jugar de nuevo',
   PAUSA: 'Pausa',
   PAUSA_SEGUIR: '¡Seguir jugando!',
@@ -151,7 +154,7 @@ const COLOR = {
   blanco: '#ffffff', tinta: '#1a1446',
   verde: '#5ed38a', celeste: '#7bdff2', rosa: '#ff7aa8',
 };
-const CONFETI = [COLOR.naranja, COLOR.amarillo, COLOR.violeta, COLOR.celeste, COLOR.rosa, '#ffffff'];
+const CONFETI = ['#ff4d6d', COLOR.amarillo, COLOR.violeta, COLOR.celeste, COLOR.rosa, COLOR.verde, COLOR.naranja, '#ffffff'];
 const TESOROS = ['📖', '❤️', '🕊️', 'logo'];   // 'logo' = el logo de la iglesia M.I.L.
 const FUENTE = '"Arial Rounded MT Bold","Varela Round","Nunito","Baloo 2","Trebuchet MS","Segoe UI",system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"';
 const FUENTE_EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
@@ -185,6 +188,9 @@ const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = 1, SEG_ARRIBA = 0, SEG_ABAJO = 0, U = 1;
 let fondo = null;               // fondo pre-dibujado (para que vaya rápido)
 let estrellasCielo = [];
+let orbes = [];                 // burbujas de luz de colores que suben
+let estrellaFugaz = null;
+let cicloFuera = -1;
 
 function redimensionar() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -200,7 +206,12 @@ function redimensionar() {
   estrellasCielo = [];
   const cant = Math.round(clamp(W * H / 9000, 30, 110));
   for (let i = 0; i < cant; i++) {
-    estrellasCielo.push({ x: Math.random() * W, y: Math.random() * H * 0.8, r: rand(0.6, 1.8), f: rand(0.5, 2), fase: rand(0, 6.28) });
+    estrellasCielo.push({ x: Math.random() * W, y: Math.random() * H * 0.8, r: rand(0.6, 2), f: rand(0.5, 2), fase: rand(0, 6.28), h: rand(0, 360) });
+  }
+  orbes = [];
+  const nOrbes = Math.round(clamp(W * H / 22000, 10, 30));
+  for (let i = 0; i < nOrbes; i++) {
+    orbes.push({ x: rand(0, W), y: rand(0, H), r: rand(6, 24), v: rand(8, 30), h: rand(0, 360), a: rand(0.06, 0.17), f: rand(0.3, 1), fase: rand(0, 6.28) });
   }
   // Si achicaron la ventana, que nada quede afuera
   for (const o of J.objetos) o.x = clamp(o.x, o.r, Math.max(o.r, W - o.r));
@@ -271,57 +282,158 @@ function textoEnRenglones(t, x, y, tam, anchoMax, color, opciones = {}) {
 }
 
 /* ---------------------------------------------------------------------
-   5) DIBUJOS PRE-CALCULADOS (sprites): calabazas, emojis y fondo
+   5) DIBUJOS PRE-CALCULADOS (sprites): demonios, emojis y fondo
    --------------------------------------------------------------------- */
-function crearCalabaza(px, dorada) {
+// Paletas de los demonios (simpáticos pero traviesos): cada uno sale de un color distinto
+const PALETAS = [
+  { claro: '#ff9a9a', medio: '#ff3d4f', oscuro: '#a8122e', cuerno: '#2b2330', alas: '#5a2840' },   // rojo
+  { claro: '#d6b3ff', medio: '#8e4dff', oscuro: '#4a1a9c', cuerno: '#2b2330', alas: '#5a2840' },   // violeta
+  { claro: '#b0ffd2', medio: '#2fd67b', oscuro: '#0a7d4a', cuerno: '#2b2330', alas: '#5a2840' },   // verde
+  { claro: '#a8e4ff', medio: '#2f9bff', oscuro: '#1446b8', cuerno: '#2b2330', alas: '#5a2840' },   // azul
+  { claro: '#ffb8e0', medio: '#ff4fa8', oscuro: '#a8196b', cuerno: '#2b2330', alas: '#5a2840' },   // rosa
+  { claro: '#a8fff2', medio: '#14d1c0', oscuro: '#07797a', cuerno: '#2b2330', alas: '#5a2840' },   // turquesa
+];
+const PAL_DORADO = { claro: '#fff8c0', medio: '#ffd23f', oscuro: '#d98a00', cuerno: '#ff6a1a', alas: '#d98a00' };
+const PAL_JEFE = { claro: '#ff8fb0', medio: '#d41a5a', oscuro: '#5e0a3a', cuerno: '#1a1420', alas: '#3a1030' };
+
+// op: { asustado, dorado, jefe }. El "asustado" es la carita que pone cuando lo echan
+function crearDemonio(px, pal, op = {}) {
   const c = document.createElement('canvas'); c.width = c.height = px;
   const g = c.getContext('2d');
-  const cx = px / 2, cy = px * 0.56, R = px * 0.42;
-  const claro = dorada ? '#fff6b0' : '#ffc46b';
-  const medio = dorada ? '#ffd23f' : '#ff9f1c';
-  const oscuro = dorada ? '#e0a100' : '#ef6c12';
-  const linea = dorada ? 'rgba(170,110,0,0.35)' : 'rgba(170,60,0,0.35)';
+  const cx = px / 2, cy = px * 0.56, R = px * 0.36;
+  const tinta = '#2b0a4a', lw = Math.max(2, px * 0.016);
+  const TAU = Math.PI * 2;
+  g.lineJoin = 'round'; g.lineCap = 'round';
 
-  // Tallo y hojita
-  g.fillStyle = '#5d8a3a';
-  rr(g, cx - px * 0.045, cy - R * 0.86 - px * 0.13, px * 0.09, px * 0.17, px * 0.03); g.fill();
-  g.fillStyle = '#7cc24a';
-  g.beginPath(); g.ellipse(cx + px * 0.11, cy - R * 0.88, px * 0.085, px * 0.042, -0.45, 0, Math.PI * 2); g.fill();
+  // Cola con punta de flecha
+  g.strokeStyle = tinta; g.lineWidth = px * 0.05;
+  g.beginPath(); g.moveTo(cx + R * 0.7, cy + R * 0.62); g.quadraticCurveTo(cx + R * 1.25, cy + R * 1.05, cx + R * 1.22, cy + R * 0.28); g.stroke();
+  g.strokeStyle = pal.oscuro; g.lineWidth = px * 0.03;
+  g.beginPath(); g.moveTo(cx + R * 0.7, cy + R * 0.62); g.quadraticCurveTo(cx + R * 1.25, cy + R * 1.05, cx + R * 1.22, cy + R * 0.28); g.stroke();
+  g.fillStyle = pal.oscuro; g.strokeStyle = tinta; g.lineWidth = lw;
+  g.beginPath(); g.moveTo(cx + R * 1.22, cy + R * 0.02); g.lineTo(cx + R * 1.08, cy + R * 0.32); g.lineTo(cx + R * 1.36, cy + R * 0.32); g.closePath(); g.fill(); g.stroke();
 
-  // Gajos (de afuera hacia adentro)
-  const gajos = [[-0.5, 0.55], [0.5, 0.55], [-0.22, 0.62], [0.22, 0.62], [0, 0.6]];
-  for (const [dx, ancho] of gajos) {
-    const x = cx + dx * R, rx = R * ancho, ry = R * 0.86;
-    const grad = g.createRadialGradient(x - rx * 0.3, cy - ry * 0.45, rx * 0.1, x, cy, Math.max(rx, ry));
-    grad.addColorStop(0, claro); grad.addColorStop(0.55, medio); grad.addColorStop(1, oscuro);
-    g.fillStyle = grad;
-    g.beginPath(); g.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = linea; g.lineWidth = px * 0.012; g.stroke();
+  // Orejas puntudas
+  g.lineWidth = lw * 1.2; g.strokeStyle = tinta;
+  for (const sg of [-1, 1]) {
+    g.fillStyle = pal.medio;
+    g.beginPath(); g.moveTo(cx + sg * R * 0.62, cy - R * 0.62); g.lineTo(cx + sg * R * 1.28, cy - R * 1.0); g.lineTo(cx + sg * R * 0.98, cy - R * 0.08); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = pal.claro;
+    g.beginPath(); g.moveTo(cx + sg * R * 0.84, cy - R * 0.55); g.lineTo(cx + sg * R * 1.12, cy - R * 0.82); g.lineTo(cx + sg * R * 0.94, cy - R * 0.28); g.closePath(); g.fill();
   }
 
-  // Carita simpática (ojos redondos, cachetes y sonrisa)
-  const ey = cy - R * 0.1, ex = R * 0.3, er = R * 0.12;
-  g.fillStyle = '#4a2511';
-  g.beginPath(); g.ellipse(cx - ex, ey, er * 0.85, er * 1.1, 0, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.ellipse(cx + ex, ey, er * 0.85, er * 1.1, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#ffffff';
-  g.beginPath(); g.arc(cx - ex + er * 0.28, ey - er * 0.4, er * 0.36, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.arc(cx + ex + er * 0.28, ey - er * 0.4, er * 0.36, 0, Math.PI * 2); g.fill();
-  g.fillStyle = 'rgba(255,90,130,0.45)';
-  g.beginPath(); g.ellipse(cx - R * 0.5, cy + R * 0.13, R * 0.13, R * 0.085, 0, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.ellipse(cx + R * 0.5, cy + R * 0.13, R * 0.13, R * 0.085, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#4a2511'; g.lineWidth = R * 0.075; g.lineCap = 'round';
-  g.beginPath(); g.arc(cx, cy + R * 0.06, R * 0.24, 0.18 * Math.PI, 0.82 * Math.PI); g.stroke();
+  // Cuernos
+  g.fillStyle = pal.cuerno; g.strokeStyle = tinta; g.lineWidth = lw * 1.2;
+  for (const sg of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(cx + sg * R * 0.2, cy - R * 0.9);
+    g.quadraticCurveTo(cx + sg * R * 0.28, cy - R * 1.35, cx + sg * R * 0.98, cy - R * 1.5);
+    g.quadraticCurveTo(cx + sg * R * 0.9, cy - R * 1.0, cx + sg * R * 0.66, cy - R * 0.7);
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = lw; g.beginPath(); g.moveTo(cx + sg * R * 0.36, cy - R * 1.05); g.quadraticCurveTo(cx + sg * R * 0.5, cy - R * 1.3, cx + sg * R * 0.8, cy - R * 1.42); g.stroke();
+    g.strokeStyle = tinta; g.lineWidth = lw * 1.2;
+  }
+  if (op.jefe) {   // el gigante tiene un tercer cuerno al medio
+    g.beginPath();
+    g.moveTo(cx - R * 0.2, cy - R * 0.92); g.quadraticCurveTo(cx - R * 0.12, cy - R * 1.3, cx, cy - R * 1.62);
+    g.quadraticCurveTo(cx + R * 0.12, cy - R * 1.3, cx + R * 0.2, cy - R * 0.92);
+    g.closePath(); g.fill(); g.stroke();
+  }
+
+  // Pies
+  g.fillStyle = pal.oscuro; g.lineWidth = lw;
+  for (const sg of [-1, 1]) {
+    g.beginPath(); g.ellipse(cx + sg * R * 0.42, cy + R * 0.92, R * 0.28, R * 0.16, 0, 0, TAU); g.fill(); g.stroke();
+  }
+  // Manitos (levantadas si está asustado)
+  const ay = op.asustado ? cy - R * 0.4 : cy + R * 0.25;
+  g.fillStyle = pal.medio;
+  for (const sg of [-1, 1]) {
+    g.beginPath(); g.ellipse(cx + sg * R * 1.0, ay, R * 0.2, R * 0.2, 0, 0, TAU); g.fill(); g.stroke();
+  }
+
+  // Cuerpo
+  const gr = g.createRadialGradient(cx - R * 0.35, cy - R * 0.45, R * 0.1, cx, cy, R * 1.15);
+  gr.addColorStop(0, pal.claro); gr.addColorStop(0.55, pal.medio); gr.addColorStop(1, pal.oscuro);
+  g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy, R, R * 0.95, 0, 0, TAU); g.fill();
+  g.lineWidth = lw * 1.4; g.strokeStyle = tinta; g.stroke();
+  g.strokeStyle = pal.oscuro; g.globalAlpha = 0.6; g.lineWidth = R * 0.09;
+  for (const sg of [-1, 1]) {
+    g.beginPath(); g.moveTo(cx + sg * R * 0.92, cy - R * 0.2); g.quadraticCurveTo(cx + sg * R * 0.55, cy + R * 0.05, cx + sg * R * 0.78, cy + R * 0.55); g.stroke();
+    g.beginPath(); g.moveTo(cx + sg * R * 0.62, cy - R * 0.72); g.quadraticCurveTo(cx + sg * R * 0.32, cy - R * 0.6, cx + sg * R * 0.2, cy - R * 0.78); g.stroke();
+  }
+  g.beginPath();
+  for (let a = 0; a < 11; a += 0.4) { const rr2 = R * 0.04 * a; const px2 = cx - R * 0.05 + Math.cos(a) * rr2, py2 = cy + R * 0.62 + Math.sin(a) * rr2 * 0.8; if (a === 0) g.moveTo(px2, py2); else g.lineTo(px2, py2); }
+  g.stroke(); g.globalAlpha = 1;
+  g.fillStyle = 'rgba(255,255,255,0.18)';
+  g.beginPath(); g.ellipse(cx, cy + R * 0.5, R * 0.5, R * 0.34, 0, 0, TAU); g.fill();
+
+  // Ojos y cejas (enojado/travieso; asustado cuando lo echan)
+  const ey = cy - R * 0.14;
+  for (const sg of [-1, 1]) {
+    g.fillStyle = '#ffffff'; g.lineWidth = lw; g.strokeStyle = tinta;
+    g.beginPath(); g.ellipse(cx + sg * R * 0.38, ey, R * (op.asustado ? 0.3 : 0.27), R * (op.asustado ? 0.34 : 0.3), 0, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = op.dorado ? '#a86a00' : '#7a3b1e';
+    g.beginPath(); g.arc(cx + sg * R * 0.36, ey + R * 0.03, R * (op.asustado ? 0.1 : 0.17), 0, TAU); g.fill();
+    g.fillStyle = tinta;
+    g.beginPath(); g.arc(cx + sg * R * 0.36, ey + R * 0.03, R * (op.asustado ? 0.06 : 0.1), 0, TAU); g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(cx + sg * R * 0.36 - R * 0.04, ey - R * 0.02, R * 0.04, 0, TAU); g.fill();
+    g.strokeStyle = tinta; g.lineWidth = R * 0.13;
+    g.beginPath();
+    if (!op.asustado) { g.moveTo(cx + sg * R * 0.7, ey - R * 0.46); g.quadraticCurveTo(cx + sg * R * 0.42, ey - R * 0.6, cx + sg * R * 0.12, ey - R * 0.4); }
+    else { g.moveTo(cx + sg * R * 0.7, ey - R * 0.3); g.lineTo(cx + sg * R * 0.16, ey - R * 0.52); }
+    g.stroke();
+  }
+
+  // Boca
+  g.lineWidth = lw; g.strokeStyle = tinta;
+  if (op.asustado) {
+    g.fillStyle = '#3a0a2a'; g.beginPath(); g.ellipse(cx, cy + R * 0.5, R * 0.2, R * 0.27, 0, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = '#ff6b9a'; g.beginPath(); g.ellipse(cx, cy + R * 0.62, R * 0.12, R * 0.09, 0, 0, TAU); g.fill();
+  } else {
+    const yb = cy + R * 0.26;
+    g.fillStyle = '#4a0a22';
+    g.beginPath(); g.moveTo(cx - R * 0.55, yb); g.quadraticCurveTo(cx, yb + R * 0.95, cx + R * 0.55, yb); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#ffffff'; g.lineWidth = lw * 0.6;
+    const largoColmillo = op.jefe ? 0.32 : 0.22;
+    for (const x of [-0.3, 0.3]) {
+      g.beginPath(); g.moveTo(cx + x * R - R * 0.1, yb); g.lineTo(cx + x * R + R * 0.1, yb); g.lineTo(cx + x * R, yb + R * largoColmillo); g.closePath(); g.fill(); g.stroke();
+    }
+    // lengua afuera
+    g.fillStyle = '#ff6b9a'; g.strokeStyle = tinta; g.lineWidth = lw;
+    g.beginPath(); g.ellipse(cx + R * 0.12, yb + R * 0.5, R * 0.22, R * 0.3, 0.1, 0, TAU); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(120,20,60,0.6)'; g.beginPath(); g.moveTo(cx + R * 0.12, yb + R * 0.3); g.lineTo(cx + R * 0.12, yb + R * 0.62); g.stroke();
+  }
 
   // Brillito
-  g.fillStyle = 'rgba(255,255,255,0.55)';
-  g.beginPath(); g.ellipse(cx - R * 0.55, cy - R * 0.45, R * 0.12, R * 0.06, -0.7, 0, Math.PI * 2); g.fill();
-  if (dorada) {
+  g.fillStyle = 'rgba(255,255,255,0.5)';
+  g.beginPath(); g.ellipse(cx - R * 0.58, cy - R * 0.58, R * 0.16, R * 0.08, -0.7, 0, TAU); g.fill();
+  if (op.dorado) {
     g.fillStyle = '#ffffff';
-    caminoEstrella(g, cx + R * 0.62, cy - R * 0.5, R * 0.16, 4, 0.35); g.fill();
-    caminoEstrella(g, cx - R * 0.2, cy + R * 0.55, R * 0.09, 4, 0.35); g.fill();
+    caminoEstrella(g, cx + R * 0.75, cy - R * 0.55, R * 0.17, 4, 0.35); g.fill();
+    caminoEstrella(g, cx - R * 0.3, cy + R * 0.78, R * 0.1, 4, 0.35); g.fill();
   }
   return c;
+}
+
+// Alas de murciélago que aletean (se dibujan en vivo, con el origen en el centro del cuerpo)
+function dibujarAlas(tam, pal, t, fase) {
+  const R = tam * 0.36;
+  ctx.save();
+  ctx.fillStyle = pal.alas || pal.oscuro; ctx.strokeStyle = '#2b0a4a'; ctx.lineWidth = Math.max(1.5, tam * 0.012); ctx.lineJoin = 'round';
+  for (const sg of [-1, 1]) {
+    ctx.save();
+    ctx.translate(sg * R * 0.75, -R * 0.1); ctx.scale(sg * 0.62, 0.62); ctx.rotate(-0.15 + Math.sin(t * 9 + fase) * 0.32);
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(R * 0.4, -R * 1.2, R * 1.3, -R * 1.3, R * 1.85, -R * 0.75);
+    ctx.quadraticCurveTo(R * 1.5, -R * 0.7, R * 1.5, -R * 0.3);
+    ctx.quadraticCurveTo(R * 1.15, -R * 0.45, R * 1.0, -R * 0.02);
+    ctx.quadraticCurveTo(R * 0.6, -R * 0.2, 0, R * 0.1);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 const cacheEmoji = new Map();
@@ -341,26 +453,22 @@ function dibujarEmoji(e, x, y, tam, alfa = 1) {
   ctx.globalAlpha = 1;
 }
 
-let SPRITE_CALABAZA, SPRITE_DORADA, SPRITE_JEFE;
+const SPRITES = { normal: [], asustado: [], dorado: null, doradoAs: null, jefe: null, jefeAs: null };
 
 function crearFondo() {
   fondo = document.createElement('canvas');
   fondo.width = Math.max(1, Math.round(W * DPR)); fondo.height = Math.max(1, Math.round(H * DPR));
   const g = fondo.getContext('2d'); g.scale(DPR, DPR);
+  // Cielo de amanecer lleno de color: la luz vence a la oscuridad
   const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#1b2560'); grad.addColorStop(0.55, '#2d2a7a'); grad.addColorStop(1, '#4b3a8f');
+  grad.addColorStop(0, '#1a1066'); grad.addColorStop(0.35, '#4a1d96'); grad.addColorStop(0.68, '#a22fb8');
+  grad.addColorStop(0.9, '#ef4f93'); grad.addColorStop(1, '#ff8f5a');
   g.fillStyle = grad; g.fillRect(0, 0, W, H);
-  // Luna amigable con brillo
-  const lx = W * 0.84, ly = H * 0.2, lr = Math.min(W, H) * 0.07;
-  const halo = g.createRadialGradient(lx, ly, lr * 0.5, lx, ly, lr * 3.2);
-  halo.addColorStop(0, 'rgba(255,243,160,0.35)'); halo.addColorStop(1, 'rgba(255,243,160,0)');
-  g.fillStyle = halo; g.fillRect(lx - lr * 4, ly - lr * 4, lr * 8, lr * 8);
-  g.fillStyle = '#fff6c9'; g.beginPath(); g.arc(lx, ly, lr, 0, Math.PI * 2); g.fill();
-  g.fillStyle = 'rgba(230,214,150,0.6)';
-  g.beginPath(); g.arc(lx - lr * 0.3, ly - lr * 0.2, lr * 0.18, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.arc(lx + lr * 0.35, ly + lr * 0.3, lr * 0.12, 0, Math.PI * 2); g.fill();
-  // Lomas suaves abajo
-  const lomas = [['#3d3184', 0.86, 0.06], ['#2b2468', 0.92, 0.05]];
+  const al = g.createRadialGradient(W * 0.5, H * 1.02, 0, W * 0.5, H * 1.02, H * 0.75);
+  al.addColorStop(0, 'rgba(255,214,102,0.55)'); al.addColorStop(1, 'rgba(255,214,102,0)');
+  g.fillStyle = al; g.fillRect(0, 0, W, H);
+  // Lomas de colores
+  const lomas = [['#7a30c0', 0.84, 0.07], ['#53209a', 0.9, 0.06], ['#341278', 0.95, 0.05]];
   for (const [col, base, alto] of lomas) {
     g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
     for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, H * base - Math.sin(x / W * Math.PI * 2 + base * 9) * H * alto * 0.5 - H * alto * 0.5);
@@ -443,6 +551,7 @@ const Sonido = {
 
   pop()      { this.ruido(0.09, 0.35, 1600); this.tono(420, 0.14, 'sine', 0.3, 1100); },
   corte()    { this.ruido(0.12, 0.3, 4200); },
+  fuera()    { this.ruido(0.28, 0.3, 2600); this.tono(900, 0.3, 'sawtooth', 0.06, 180); this.tono(420, 0.14, 'sine', 0.25, 1100); },
   combo(n)   { [660, 880, 1100, 1320].slice(0, Math.min(4, n)).forEach((f, i) => this.tono(f, 0.14, 'triangle', 0.16, 0, i * 0.05)); },
   estrella() { [880, 1175, 1568, 2093].forEach((f, i) => this.tono(f, 0.18, 'triangle', 0.16, 0, i * 0.06)); },
   error()    { this.tono(440, 0.2, 'sine', 0.18, 370); this.tono(370, 0.3, 'sine', 0.14, 294, 0.16); },
@@ -511,7 +620,7 @@ function mostrarBanner(titulo, sub, color, duracion = 2.2) {
 }
 
 /* ---------------------------------------------------------------------
-   8) OBJETOS: calabazas, calabaza dorada y tesoros
+   8) OBJETOS: demonios, demonio dorada y tesoros
    --------------------------------------------------------------------- */
 function crearObjeto(tipo) {
   const r = tipo === 'dorada' ? radioObjeto() * 1.1 : radioObjeto();
@@ -529,7 +638,7 @@ function crearObjeto(tipo) {
   const tiempoVuelo = (-2 * vy) / g;
   const xDestino = rand(r, W - r);                       // dónde cae: cruza la pantalla en diagonal
   J.objetos.push({
-    tipo, emoji: tipo === 'tesoro' ? elegir(TESOROS) : null,
+    tipo, emoji: tipo === 'tesoro' ? elegir(TESOROS) : null, pal: (Math.random() * PALETAS.length) | 0,
     x, y: y0, r, vx: clamp((xDestino - x) / tiempoVuelo, -W * 0.35, W * 0.35), vy, g,
     giro: 0, vGiro: tipo === 'tesoro' ? 0 : rand(-2.5, 2.5), fase: rand(0, 6.28),
     t: 0, estado: 'vivo', tEstado: 0,
@@ -575,8 +684,12 @@ function dibujarObjetos() {
         g.addColorStop(0, `rgba(255,240,150,${0.7 * p})`); g.addColorStop(1, 'rgba(255,240,150,0)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 1.7, 0, Math.PI * 2); ctx.fill();
       }
-      const s = o.tipo === 'dorada' ? SPRITE_DORADA : SPRITE_CALABAZA;
       const tam = o.r * 2.35;
+      const pal = o.tipo === 'dorada' ? PAL_DORADO : PALETAS[o.pal];
+      const s = o.tipo === 'dorada' ? SPRITES.dorado : SPRITES.normal[o.pal];
+      const sq = Math.sin(o.t * 7 + o.fase) * 0.06;       // late como si respirara
+      ctx.scale(1 + sq, 1 - sq);
+      dibujarAlas(tam, pal, o.t, o.fase);
       ctx.drawImage(s, -tam / 2, -tam * 0.56, tam, tam);
     }
     ctx.restore();
@@ -615,7 +728,8 @@ function brilloToque(x, y) {
 }
 
 function textoFlotante(t, x, y, color = COLOR.amarillo, tam = 26) {
-  flotantes.push({ t, x: clamp(x, 60, W - 60), y, color, tam: tam * U, vida: 0, max: 1.1 });
+  const mitad = Math.min(W / 2, 20 + t.length * tam * U * 0.3);   // que los textos largos no se corten en el borde
+  flotantes.push({ t, x: clamp(x, mitad, W - mitad), y, color, tam: tam * U, vida: 0, max: 1.1 });
 }
 
 function actualizarEfectos(dt) {
@@ -624,12 +738,16 @@ function actualizarEfectos(dt) {
     if (p.vx !== undefined) {
       p.x += p.vx * dt; p.y += p.vy * dt;
       if (p.tipo === 'confeti') { p.vy += 380 * dt; p.vx *= 0.985; }
-      else if (p.tipo === 'mitad') { p.vy += H * 1.1 * dt; }
+      else if (p.tipo === 'expulsado') {
+        if (particulas.length < 450) particulas.push({ tipo: 'estrella', x: p.x + rand(-8, 8) * U, y: p.y + rand(-8, 8) * U,
+          vx: rand(-50, 50), vy: rand(-50, 50), vida: 0, max: 0.5, tam: rand(4, 9) * U, color: p.color, rot: rand(0, 6), vr: rand(-8, 8) });
+      }
       else { p.vy += 160 * dt; p.vx *= 0.97; }
       p.rot += p.vr * dt;
     }
   }
-  particulas = particulas.filter(p => p.vida < p.max && p.y < H + (p.tam || 0) + 40);
+  particulas = particulas.filter(p => p.vida < p.max && p.y < H + (p.tam || 0) + 40 &&
+    !(p.tipo === 'expulsado' && (p.x < -p.tam || p.x > W + p.tam || p.y < -p.tam)));
   for (const f of flotantes) { f.vida += dt; f.y -= 60 * U * dt; }
   flotantes = flotantes.filter(f => f.vida < f.max);
 }
@@ -646,20 +764,19 @@ function dibujarParticulas() {
       const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
       g.addColorStop(0, `rgba(255,255,230,${0.95 * alfa})`); g.addColorStop(0.4, `rgba(255,230,120,${0.6 * alfa})`); g.addColorStop(1, 'rgba(255,220,100,0)');
       ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
-    } else if (p.tipo === 'mitad') {
-      // Media calabaza: recortamos el dibujo por la línea del corte
-      ctx.globalAlpha = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
-      // (la máscara gira junto con la mitad, así el corte queda pegado al dibujo)
-      const s = p.tam, giro = p.rot - p.rot0;
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.corte + giro);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(-s, p.lado < 0 ? -s : 0, s * 2, s); ctx.clip();
-      ctx.rotate(p.rot0 - p.corte);
-      ctx.drawImage(p.dorada ? SPRITE_DORADA : SPRITE_CALABAZA, -s / 2, -s * 0.56, s, s);
+    } else if (p.tipo === 'expulsado') {
+      // El demonio sale volando de la pantalla con una estela de color
+      const sz = p.tam * Math.max(0.5, 1 - p.vida * 0.45);
+      const vel = Math.hypot(p.vx, p.vy) || 1, ux = p.vx / vel, uy = p.vy / vel, cola = sz * 1.9;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.lineCap = 'round';
+      const gc = ctx.createLinearGradient(p.x, p.y, p.x - ux * cola, p.y - uy * cola);
+      gc.addColorStop(0, 'rgba(255,255,255,0.85)'); gc.addColorStop(0.35, p.color + 'aa'); gc.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = gc; ctx.lineWidth = sz * 0.55;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - ux * cola, p.y - uy * cola); ctx.stroke();
       ctx.restore();
-      // Borde de luz en el corte
-      ctx.strokeStyle = `rgba(255,248,200,${0.9 * (1 - k)})`; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(-s * 0.4, 0); ctx.lineTo(s * 0.4, 0); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.drawImage(p.sprite, -sz / 2, -sz * 0.56, sz, sz);
       ctx.restore();
     } else if (p.tipo === 'estrella') {
       ctx.globalAlpha = alfa; ctx.fillStyle = p.color;
@@ -708,7 +825,7 @@ function actualizarJuego(dt) {
           J.proximaDorada = rand(CONFIG.DORADA_CADA_MIN, CONFIG.DORADA_CADA_MAX);
         } else {
           const probTesoro = J.transcurrido < 3 ? 0 : lerp(CONFIG.PROB_TESORO_INICIAL, CONFIG.PROB_TESORO_FINAL, d);
-          crearObjeto(Math.random() < probTesoro ? 'tesoro' : 'calabaza');
+          crearObjeto(Math.random() < probTesoro ? 'tesoro' : 'demonio');
         }
       }
       J.proximaAparicion = lerp(CONFIG.INTERVALO_INICIAL, CONFIG.INTERVALO_FINAL, d) * rand(0.75, 1.25) * (tanda > 1 ? 1.6 : 1);
@@ -731,32 +848,26 @@ function puntosConMultiplicador(base) {
   return base * (J.modoLuz > 0 ? CONFIG.MULTIPLICADOR_MODO_LUZ : 1);
 }
 
-// angulo = dirección del corte (si se cortó deslizando); null = se rompió con un toque
-function romperCalabaza(o, angulo = null) {
+// angulo = hacia dónde sale volando el demonio (la dirección del dedo, o desde el toque)
+function romperDemonio(o, angulo) {
   const dorada = o.tipo === 'dorada';
-  const pts = puntosConMultiplicador(CONFIG.PUNTOS_CALABAZA * (dorada ? CONFIG.MULTIPLICADOR_DORADA : 1));
+  const pts = puntosConMultiplicador(CONFIG.PUNTOS_DEMONIO * (dorada ? CONFIG.MULTIPLICADOR_DORADA : 1));
   J.puntos += pts;
   o.estado = 'roto';
   J.objetos.splice(J.objetos.indexOf(o), 1);
-  if (angulo === null) {
-    explosionLuz(o.x, o.y, dorada ? 1.4 : 1, dorada);
-  } else {
-    // Dos mitades que salen despedidas hacia los costados del corte y caen girando
-    const nx = -Math.sin(angulo), ny = Math.cos(angulo);
-    const rot0 = o.giro + Math.sin(o.t * 2.2 + o.fase) * 0.12;
-    for (const lado of [-1, 1]) {
-      const v = rand(110, 170) * U;
-      particulas.push({ tipo: 'mitad', dorada, lado, corte: angulo, x: o.x, y: o.y, tam: o.r * 2.35,
-        vx: o.vx * 0.4 + nx * v * lado, vy: Math.min(o.vy, 0) * 0.3 + ny * v * lado - 60 * U,
-        vida: 0, max: 1.8, rot: rot0, rot0, vr: lado * rand(2, 4.5) });
-    }
-    explosionLuz(o.x, o.y, dorada ? 1.1 : 0.75, dorada);
-    Sonido.corte();
-  }
+  const pal = dorada ? PAL_DORADO : PALETAS[o.pal];
+  const v = Math.max(W, H) * 1.25;
+  particulas.push({ tipo: 'expulsado', x: o.x, y: o.y, tam: o.r * 2.35,
+    vx: Math.cos(angulo) * v + o.vx * 0.3, vy: Math.sin(angulo) * v + Math.min(o.vy, 0) * 0.3,
+    vida: 0, max: 2, rot: o.giro + Math.sin(o.t * 2.2 + o.fase) * 0.12, vr: rand(6, 11) * (Math.random() < 0.5 ? -1 : 1),
+    color: pal.medio, sprite: dorada ? SPRITES.doradoAs : SPRITES.asustado[o.pal] });
+  explosionLuz(o.x, o.y, dorada ? 1.1 : 0.7, dorada);
+  Sonido.fuera();
   textoFlotante('+' + pts, o.x, o.y - o.r, dorada ? '#fff6b0' : COLOR.amarillo, dorada ? 34 : 28);
+  if (Math.random() < 0.4) textoFlotante(elegir(TEXTOS.FRASES_FUERA), o.x, o.y + o.r * 0.5, '#ffffff', 22);
   if (dorada) {
     Sonido.estrella();
-    // La calabaza dorada devuelve una estrellita de vida
+    // El demonio dorado devuelve una estrellita de vida
     if (CONFIG.DORADA_DEVUELVE_VIDA && J.vidas < CONFIG.VIDAS) {
       J.vidas++;
       textoFlotante('+1 ⭐', o.x, o.y + o.r, '#ffffff', 26);
@@ -764,8 +875,6 @@ function romperCalabaza(o, angulo = null) {
     const frase = TEXTOS.FRASES_DORADA[J.fraseIdx % TEXTOS.FRASES_DORADA.length];
     J.fraseIdx++;
     mostrarBanner('✨ ' + frase + ' ✨', '', '#fff6b0', 2.6);
-  } else {
-    Sonido.pop();
   }
   // Combo → MODO LUZ
   J.combo++;
@@ -792,7 +901,7 @@ function tocarTesoro(o) {
 }
 
 /* ---------------------------------------------------------------------
-   11) JEFE FINAL: la calabaza gigante
+   11) JEFE FINAL: la demonio gigante
    --------------------------------------------------------------------- */
 function iniciarJefe() {
   J.fase = 'jefe';
@@ -844,7 +953,16 @@ function terminarPartida(motivo) {
 function dibujarJefe() {
   const j = J.jefe; if (!j) return;
   if (j.roto) {
-    // Queda una gran luz donde estaba la calabaza
+    // El demonio gigante sale volando por arriba, girando
+    const vuelo = j.tRoto, ang = -1.1, d = vuelo * vuelo * Math.max(W, H) * 1.1;
+    const px = j.x + Math.cos(ang) * d, py = j.y + Math.sin(ang) * d;
+    const sz = j.r * 2.35 * Math.max(0.35, 1 - vuelo * 0.5);
+    if (py > -sz) {
+      ctx.save(); ctx.translate(px, py); ctx.rotate(vuelo * 7);
+      ctx.drawImage(SPRITES.jefeAs, -sz / 2, -sz * 0.56, sz, sz);
+      ctx.restore();
+    }
+    // Queda una gran luz donde estaba
     const k = clamp(j.tRoto / 1.2, 0, 1);
     const r = j.r * (1 + k * 2.5);
     const g = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, r);
@@ -869,8 +987,9 @@ function dibujarJefe() {
   ctx.translate(temblor, 0);
   ctx.scale(1 + j.golpe * 0.1, 1 - j.golpe * 0.1);
   const tam = j.r * 2.35;
-  ctx.drawImage(SPRITE_JEFE, -tam / 2, -tam * 0.56, tam, tam);
-  // Grietas de luz sobre la calabaza
+  dibujarAlas(tam, PAL_JEFE, j.t, 1);
+  ctx.drawImage(j.golpe > 0.45 ? SPRITES.jefeAs : SPRITES.jefe, -tam / 2, -tam * 0.56, tam, tam);
+  // Grietas de luz sobre la demonio
   ctx.strokeStyle = '#fff8c8'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, j.r * 0.03);
   const nGrietas = Math.floor(progreso * 6);
   for (let i = 0; i < nGrietas; i++) {
@@ -895,7 +1014,7 @@ function dibujarJefe() {
   const frac = j.energia / CONFIG.TOQUES_JEFE;
   if (frac > 0) {
     const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-    g.addColorStop(0, COLOR.naranjaOsc); g.addColorStop(1, COLOR.naranja);
+    g.addColorStop(0, '#ff3d7f'); g.addColorStop(1, COLOR.naranja);
     ctx.fillStyle = g; rr(ctx, bx, by, Math.max(bh, bw * frac), bh, bh / 2); ctx.fill();
   }
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; rr(ctx, bx - 4, by - 4, bw + 8, bh + 8, (bh + 8) / 2); ctx.stroke();
@@ -1178,10 +1297,10 @@ function dibujarInicio() {
   const arriba = SEG_ARRIBA + 10, abajo = H - SEG_ABAJO - 10;
   const ancho = Math.min(W - 32, 520 * U);
   // Bloques de arriba hacia abajo (alto en unidades U)
-  const tamLogo = 96 * U, tamTit = Math.min(54 * U, W * 0.14), tamSub = 23 * U, altoHeroe = 190 * U;
+  const tamLogo = 96 * U, tamTit = Math.min(50 * U, W * 0.13), tamSub = 23 * U, altoHeroe = 190 * U;
   const tamLema = 19 * U, altoBoton = 80 * U, tamInst = 15 * U;
   const lineasLema = renglones(TEXTOS.LEMA, tamLema, ancho - 20, '800');
-  const bloques = [tamLogo, tamTit * 1.05, tamSub * 1.3, altoHeroe, lineasLema.length * tamLema * 1.25, altoBoton, tamInst * 3.9];
+  const bloques = [tamLogo, tamTit * 2.2, tamSub * 1.3, altoHeroe, lineasLema.length * tamLema * 1.25, altoBoton, tamInst * 3.9];
   const suma = bloques.reduce((a, b) => a + b, 0);
   const hueco = Math.max(4, (abajo - arriba - suma) / (bloques.length + 1));
   let y = arriba + hueco;
@@ -1194,20 +1313,36 @@ function dibujarInicio() {
   const yTit = centro(1);
   const entrada = rebote(t / 0.7);
   ctx.save(); ctx.translate(W / 2, yTit); ctx.scale(entrada, entrada);
-  texto(TEXTOS.TITULO, 0, 0, tamQueEntra(TEXTOS.TITULO, tamTit, ancho), COLOR.amarillo, { colorBorde: '#6c2a00' });
+  const tt = Math.min(tamQueEntra(TEXTOS.TITULO_1, tamTit, ancho), tamQueEntra(TEXTOS.TITULO_2, tamTit, ancho));
+  texto(TEXTOS.TITULO_1, 0, -tt * 0.55, tt, COLOR.amarillo, { colorBorde: '#4a0a5e' });
+  texto(TEXTOS.TITULO_2, 0, tt * 0.55, tt, '#ff6bd5', { colorBorde: '#3a0a5e' });
   ctx.restore();
   const ySub = centro(2);
-  texto(TEXTOS.SUBTITULO, W / 2, ySub, tamQueEntra(TEXTOS.SUBTITULO, tamSub, ancho), COLOR.naranja);
-  // Héroe apuntando con la linterna a una calabaza que se rompe de luz
+  texto(TEXTOS.SUBTITULO, W / 2, ySub, tamQueEntra(TEXTOS.SUBTITULO, tamSub, ancho), COLOR.celeste);
+  // Héroe apuntando con la linterna a una demonio que se rompe de luz
   const yHeroe = centro(3);
   const s = altoHeroe * 0.92;
   const pies = yHeroe + altoHeroe / 2;
   const hx = W / 2 - Math.min(ancho * 0.22, s * 0.5);
   dibujarHeroe(hx, pies, s, J.reloj);
-  const cx = clamp(hx + s * 0.95, 40, W - 40), cy = pies - s * 0.95 + Math.sin(J.reloj * 2) * 6;
-  const tamC = s * 0.42;
-  ctx.drawImage(SPRITE_CALABAZA, cx - tamC / 2, cy - tamC * 0.56, tamC, tamC);
-  if (Math.random() < 0.04) explosionLuz(cx + rand(-10, 10), cy + rand(-10, 10), 0.35, Math.random() < 0.4);
+  const cx0 = clamp(hx + s * 0.95, 40, W - 40), cy0 = pies - s * 0.95 + Math.sin(J.reloj * 2) * 6;
+  const tamC = s * 0.5;
+  const CICLO = 3.4, ciclo = J.reloj % CICLO, nCiclo = Math.floor(J.reloj / CICLO), palI = nCiclo % PALETAS.length;
+  if (ciclo < 2.3) {
+    // Aparece un demonio, se asusta con la luz y tiembla...
+    const ap = rebote(ciclo / 0.5), tem = ciclo > 1.5 ? Math.sin(J.reloj * 55) * 2.5 * U : 0;
+    ctx.save(); ctx.translate(cx0 + tem, cy0); ctx.scale(ap, ap);
+    dibujarAlas(tamC, PALETAS[palI], J.reloj, 0);
+    ctx.drawImage(ciclo > 1.5 ? SPRITES.asustado[palI] : SPRITES.normal[palI], -tamC / 2, -tamC * 0.56, tamC, tamC);
+    ctx.restore();
+  } else {
+    // ...¡y sale volando!
+    if (cicloFuera !== nCiclo) { cicloFuera = nCiclo; explosionLuz(cx0, cy0, 0.6, false); }
+    const k = (ciclo - 2.3) / (CICLO - 2.3), d = k * k * Math.max(W, H) * 0.9, ang = -0.5;
+    ctx.save(); ctx.translate(cx0 + Math.cos(ang) * d, cy0 + Math.sin(ang) * d); ctx.rotate(k * 9); ctx.scale(1 - k * 0.4, 1 - k * 0.4);
+    ctx.drawImage(SPRITES.asustado[palI], -tamC / 2, -tamC * 0.56, tamC, tamC);
+    ctx.restore();
+  }
   // Lema
   const yLema = centro(4);
   const altoL = tamLema * 1.25;
@@ -1271,10 +1406,10 @@ function dibujarPregunta() {
   // Dos botones grandes lado a lado
   const yB = yTit + tamTit * 0.8 + 30 * U;
   const x1 = W / 2 - sep / 2 - bw, x2 = W / 2 + sep / 2;
-  const apagarCalabaza = p.estado !== 'esperando';
-  boton('respCalabaza', x1, yB, bw, bh, '', COLOR.violeta, COLOR.violetaOsc, () => responder(false), {
-    apagado: apagarCalabaza,
-    dibujo: (w, h) => dibujarEmoji('🎃', 0, 0, Math.min(w, h) * 0.6),
+  const apagarDemonio = p.estado !== 'esperando';
+  boton('respDemonio', x1, yB, bw, bh, '', COLOR.violeta, COLOR.violetaOsc, () => responder(false), {
+    apagado: apagarDemonio,
+    dibujo: (w, h) => { const m = Math.min(w, h) * 0.85; ctx.drawImage(SPRITES.normal[0], -m / 2, -m * 0.56, m, m); },
   });
   boton('respJesus', x2, yB, bw, bh, '', '#8fd3ff', '#3a6fd8', () => responder(true), {
     latido: p.estado === 'casi',
@@ -1411,14 +1546,14 @@ function alTocar(x, y) {
     if (j && !j.roto && j.t > 0.5 && Math.hypot(x - j.x, y - j.y) <= j.r * 1.15) golpearJefe(x, y);
     return;
   }
-  // Primero buscamos calabazas (más generosas), después tesoros
+  // Primero buscamos demonios (más generosas), después tesoros
   let mejor = null, mejorD = Infinity;
   for (const o of J.objetos) {
     if (o.estado !== 'vivo' || o.tipo === 'tesoro') continue;
     const d = Math.hypot(x - o.x, y - o.y);
     if (d <= o.r * 1.25 && d < mejorD) { mejor = o; mejorD = d; }
   }
-  if (mejor) { romperCalabaza(mejor); return 'calabaza'; }
+  if (mejor) { romperDemonio(mejor, Math.atan2(mejor.y - y, mejor.x - x)); return 'demonio'; }
   for (const o of J.objetos) {
     if (o.estado !== 'vivo' || o.tipo !== 'tesoro') continue;
     if (Math.hypot(x - o.x, y - o.y) <= o.r * 0.9) { tocarTesoro(o); return; }
@@ -1463,7 +1598,7 @@ function moverPasada(p, x, y) {
       if (o.estado !== 'vivo') continue;
       const d = distSegmento(o.x, o.y, p.x, p.y, x, y);
       if (o.tipo === 'tesoro') { if (d <= o.r * 0.45) tocarTesoro(o); }   // perdonamos los roces
-      else if (d <= o.r * 0.95) { romperCalabaza(o, angulo); p.cortadas++; }
+      else if (d <= o.r * 0.95) { romperDemonio(o, angulo); p.cortadas++; }
     }
   }
   p.x = x; p.y = y;
@@ -1473,7 +1608,7 @@ function terminarPasada(id) {
   const p = pasadas.get(id);
   if (!p) return;
   pasadas.delete(id);
-  // Combo por cortar varias calabazas de una sola pasada
+  // Combo por cortar varias demonios de una sola pasada
   if (p.cortadas >= 2 && J.pantalla === 'juego') {
     const bonus = puntosConMultiplicador(CONFIG.BONUS_CORTE_MULTIPLE * p.cortadas);
     J.puntos += bonus;
@@ -1486,7 +1621,7 @@ canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   Sonido.iniciar();
   const tocoBoton = !!botonEn(e.clientX, e.clientY);
-  const rompio = alTocar(e.clientX, e.clientY) === 'calabaza';   // si arrancó sobre una calabaza, cuenta para el corte múltiple
+  const rompio = alTocar(e.clientX, e.clientY) === 'demonio';   // si arrancó sobre una demonio, cuenta para el corte múltiple
   if (!tocoBoton && puedeCortar()) {
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* no pasa nada */ }
     const estela = { puntos: [{ x: e.clientX, y: e.clientY, t: J.reloj }] };
@@ -1525,8 +1660,9 @@ function dibujarEstelas() {
     for (let pasada = 0; pasada < 2; pasada++) {        // 0 = brillo amarillo, 1 = centro blanco
       for (let i = 1; i < pts.length; i++) {
         const f = clamp(1 - (J.reloj - pts[i].t) / CONFIG.DURACION_ESTELA, 0, 1);
-        const ancho = (pasada === 0 ? 16 : 6) * U * (0.3 + 0.7 * f);
-        ctx.strokeStyle = pasada === 0 ? `rgba(255,210,63,${0.55 * f})` : `rgba(255,255,240,${0.95 * f})`;
+        const ancho = (pasada === 0 ? 22 : 7) * U * (0.3 + 0.7 * f);
+        const hue = (J.reloj * 420 + i * 22) % 360;       // la estela cambia de color como un arcoíris
+        ctx.strokeStyle = pasada === 0 ? `hsla(${hue},100%,60%,${0.6 * f})` : `rgba(255,255,255,${0.95 * f})`;
         ctx.lineWidth = ancho;
         ctx.beginPath(); ctx.moveTo(pts[i - 1].x, pts[i - 1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
       }
@@ -1573,12 +1709,62 @@ function actualizar(dt) {
 
 function dibujarCielo() {
   ctx.drawImage(fondo, 0, 0, W, H);
-  ctx.fillStyle = '#ffffff';
+  const t = J.reloj;
+  // Rayos de luz de colores que giran despacito
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const largo = Math.hypot(W, H), nR = 14;
+  ctx.translate(W * 0.5, H * 0.36); ctx.rotate(t * 0.08);
+  for (let i = 0; i < nR; i++) {
+    ctx.rotate(Math.PI * 2 / nR);
+    ctx.fillStyle = `hsla(${(i * 26 + t * 20) % 360},100%,70%,0.05)`;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(largo, -largo * 0.07); ctx.lineTo(largo, largo * 0.07); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // Cintas de aurora que ondulan
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let b = 0; b < 3; b++) {
+    ctx.strokeStyle = `hsla(${(b * 90 + t * 15) % 360},90%,60%,0.1)`; ctx.lineWidth = 46 * U;
+    ctx.beginPath();
+    for (let x = -20; x <= W + 20; x += 24) {
+      const y = H * (0.18 + b * 0.16) + Math.sin(x / W * 5 + t * 0.7 + b * 2) * H * 0.05;
+      if (x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Burbujas de luz que suben
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const o of orbes) {
+    const span = H + o.r * 4;
+    const y = (((o.y - t * o.v) % span) + span) % span - o.r * 2;
+    const x = o.x + Math.sin(t * o.f + o.fase) * 18 * U;
+    ctx.fillStyle = `hsla(${(o.h + t * 10) % 360},100%,70%,${o.a})`;
+    ctx.beginPath(); ctx.arc(x, y, o.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  // Estrellitas de colores que titilan
   for (const s of estrellasCielo) {
-    ctx.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(J.reloj * s.f + s.fase));
+    ctx.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.f + s.fase));
+    ctx.fillStyle = `hsl(${s.h},100%,85%)`;
     ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  // Estrella fugaz de vez en cuando
+  if (!estrellaFugaz && Math.random() < 0.006) {
+    const a = rand(0.35, 0.6);
+    estrellaFugaz = { x: rand(W * 0.2, W), y: rand(0, H * 0.3), vx: -Math.cos(a) * W * 0.9, vy: Math.sin(a) * W * 0.9, t0: t };
+  }
+  if (estrellaFugaz) {
+    const e = estrellaFugaz, k = t - e.t0;
+    if (k > 0.8) estrellaFugaz = null;
+    else {
+      const x = e.x + e.vx * k, y = e.y + e.vy * k;
+      const gf = ctx.createLinearGradient(x, y, x - e.vx * 0.12, y - e.vy * 0.12);
+      gf.addColorStop(0, 'rgba(255,255,255,0.9)'); gf.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = gf; ctx.lineWidth = 3 * U; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - e.vx * 0.12, y - e.vy * 0.12); ctx.stroke();
+    }
+  }
 }
 
 function dibujar() {
@@ -1602,9 +1788,12 @@ function bucle(ahora) {
 }
 
 // ¡Arrancamos!
-SPRITE_CALABAZA = crearCalabaza(256, false);
-SPRITE_DORADA = crearCalabaza(256, true);
-SPRITE_JEFE = crearCalabaza(640, false);
+SPRITES.normal = PALETAS.map(p => crearDemonio(256, p));
+SPRITES.asustado = PALETAS.map(p => crearDemonio(256, p, { asustado: true }));
+SPRITES.dorado = crearDemonio(256, PAL_DORADO, { dorado: true });
+SPRITES.doradoAs = crearDemonio(256, PAL_DORADO, { dorado: true, asustado: true });
+SPRITES.jefe = crearDemonio(640, PAL_JEFE, { jefe: true });
+SPRITES.jefeAs = crearDemonio(640, PAL_JEFE, { jefe: true, asustado: true });
 redimensionar();
 requestAnimationFrame(bucle);
 
